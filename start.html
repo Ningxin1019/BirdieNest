@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Nest-Grafting Manifesto</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: rgb(0, 0, 0);
+      overflow: hidden;
+    }
+    .web-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    h1 {
+      font-family: Prestige Elite Std, monospace;
+      position: absolute;
+      top: 5%;
+      left: 5%;
+      margin: 0;
+      padding: 15px;
+      font-size: 1.2em;
+      text-align: left;
+      z-index: 10;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .text-fragment {
+      position: absolute;
+      padding: 5px;
+      font-size: 0.85em;
+      white-space: nowrap;
+      transform-origin: center left;
+      transition: all 0.3s ease;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    span {
+      display: inline-block;
+      padding: 2px 6px;
+      color: rgba(255, 255, 255, 0.8);
+      transition: all 0.3s ease;
+    }
+    
+    /* Text fragment positions - 30 positions, one every 12 degrees */
+    .t1 { top: 15%; left: 52%; transform: translateX(-50%) rotate(0deg); }
+    .t2 { top: 20%; right: 28%; transform: rotate(12deg); }
+    .t3 { top: 25%; right: 23%; transform: rotate(24deg); }
+    .t4 { top: 30%; right: 18%; transform: rotate(36deg); }
+    .t5 { top: 35%; right: 13%; transform: rotate(48deg); }
+    .t6 { top: 40%; right: 13%; transform: rotate(60deg); }
+    .t7 { top: 45%; right: 13%; transform: rotate(72deg); }
+    .t8 { top: 48%; right: 13%; transform: rotate(84deg); }
+    .t9 { bottom: 48%; right: 13%; transform: rotate(96deg); }
+    .t10 { bottom: 45%; right: 13%; transform: rotate(108deg); }
+    .t11 { bottom: 40%; right: 13%; transform: rotate(120deg); }
+    .t12 { bottom: 35%; right: 13%; transform: rotate(132deg); }
+    .t13 { bottom: 30%; right: 18%; transform: rotate(144deg); }
+    .t14 { bottom: 25%; right: 23%; transform: rotate(156deg); }
+    .t15 { bottom: 20%; right: 28%; transform: rotate(168deg); }
+    .t16 { bottom: 15%; left: 52%; transform: translateX(-50%) rotate(180deg); }
+    .t17 { bottom: 20%; left: 32%; transform: rotate(192deg); }
+    .t18 { bottom: 25%; left: 27%; transform: rotate(204deg); }
+    .t19 { bottom: 30%; left: 22%; transform: rotate(216deg); }
+    .t20 { bottom: 35%; left: 17%; transform: rotate(228deg); }
+    .t21 { bottom: 40%; left: 17%; transform: rotate(240deg); }
+    .t22 { bottom: 45%; left: 17%; transform: rotate(252deg); }
+    .t23 { bottom: 48%; left: 17%; transform: rotate(264deg); }
+    .t24 { top: 48%; left: 17%; transform: rotate(276deg); }
+    .t25 { top: 45%; left: 17%; transform: rotate(288deg); }
+    .t26 { top: 40%; left: 17%; transform: rotate(300deg); }
+    .t27 { top: 35%; left: 17%; transform: rotate(312deg); }
+    .t28 { top: 30%; left: 22%; transform: rotate(324deg); }
+    .t29 { top: 25%; left: 27%; transform: rotate(336deg); }
+    .t30 { top: 20%; left: 32%; transform: rotate(348deg); }
+
+    .text-fragment:hover {
+      z-index: 2;
+      transform: scale(1.1);
+      color: rgb(255, 255, 255);
+    }
+
+    em {
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    b {
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .signature {
+      position: absolute;
+      bottom: 5%;
+      right: 7%;
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .content {
+      margin: 0 auto;
+      /*margin-left: 100px;  向右移动一点点 */
+    }
+  </style>
+  <link rel="stylesheet" href="https://use.typekit.net/rsf1svc.css">
+</head>
+<body>
+
+<div class="web-container">
+  <h1>Nest-Grafting<br>Manifesto</h1>
+
+  <div class="content">
+    <!-- 文本片段 -->
+    <div class="text-fragment t1"><em>On the ruins</em>, nesting is instinct</div>
+    <div class="text-fragment t2"><b>Displacement is destiny</b></div>
+    <div class="text-fragment t3">We pick up <span>plastic films</span></div>
+    <div class="text-fragment t4"><span>broken phrases</span>, <span>rusted concepts</span></div>
+    <div class="text-fragment t5">forgotten formats, from the gaps of time</div>
+    <div class="text-fragment t6">that do not belong to us</div>
+    <div class="text-fragment t7">We tuck them into our tail feathers</div>
+    <div class="text-fragment t8">as a <em>clumsy</em> yet <b>sincere</b> ornamentation</div>
+    <div class="text-fragment t9">We no longer possess <em>complete materials</em></div>
+    <div class="text-fragment t10">No one gifts us <b>clean twigs</b> or <b>soft moss</b> anymore</div>
+    <div class="text-fragment t11">What remains are <span>drifting waste words</span></div>
+    <div class="text-fragment t12"><span>wrinkled interfaces</span></div>
+    <div class="text-fragment t13">the remnants of yesterday's templates</div>
+    <div class="text-fragment t14">But the nest must grow</div>
+    <div class="text-fragment t15">Even if suspended at the <em>edge of speed</em></div>
+    <div class="text-fragment t16">spinning alone in the wrong context</div>
+    <div class="text-fragment t17"><b>We graft</b></div>
+    <div class="text-fragment t18"><b>we displace</b></div>
+    <div class="text-fragment t19"><b>we remix</b></div>
+    <div class="text-fragment t20"><b>we appropriate</b></div>
+    <div class="text-fragment t21">We refuse <em>empty purity</em></div>
+    <div class="text-fragment t22">and reject <em>withered order</em></div>
+    <div class="text-fragment t23">Let heterogeneity stitch itself here</div>
+    <div class="text-fragment t24">Let fragility become structure</div>
+    <div class="text-fragment t25">Let the temporary become eternal</div>
+    <div class="text-fragment t26">We are a flock</div>
+    <div class="text-fragment t27">drifting through the <span>ruins of the internet</span></div>
+    <div class="text-fragment t28">the <span>crevices of cities</span></div>
+    <div class="text-fragment t29">the <span>relics of language</span></div>
+    <div class="text-fragment t30">With the <b>wrong materials</b>, we build the <b>right home</b></div>
+  </div>
+
+  <div class="signature">—— Nest-Grafting</div>
+</div>
+
+</body>
+</html>
