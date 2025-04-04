@@ -1,16 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Page Title</title>
-
+  <title>简易 CMS - Google Sheets 驱动</title>
+  <style>
+    .content-item {
+      margin: 20px;
+      padding: 15px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+    }
+    img { margin-top: 10px; }
+  </style>
 </head>
 <body>
-    <!-- 在 HTML 中引入 Papa Parse -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body {
+            background-color:	#FF69B4;
+        }
+    </style>
+  <h1>我的动态内容</h1>
+  <div id="content-container">
+    <!-- 内容将在此动态加载 -->
+  </div>
 
-
-<h1>This is a Heading</h1>
-<p>This is a paragraph.</p>
-
+  <!-- 引入 Papa Parse 和 pull_content.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <script src="pull_content.js"></script>
 </body>
 </html>
