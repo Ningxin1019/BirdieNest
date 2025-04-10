@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>随机狗狗图片示例</title>
+</head>
+<body>
+  <button id="getImage">获取随机狗狗图片</button>
+  <div id="imgContainer"></div>
+
+  <script>
+    document.getElementById('getImage').addEventListener('click', function(){
+      fetch('https://random.dog/woof.json')
+        .then(response => response.json())
+        .then(data => {
+          // 检查返回的是否为图片（部分视频格式可能返回）
+          if (data.url.endsWith('.jpg') || data.url.endsWith('.png') || data.url.endsWith('.gif')) {
+            document.getElementById('imgContainer').innerHTML =
+              '<img src="' + data.url + '" alt="Random Dog Image" style="max-width: 100%;">';
+          } else {
+            document.getElementById('imgContainer').innerHTML =
+              '<p>返回的是视频链接，请点击按钮获取下一张图片。</p>';
+          }
+        })
+        .catch(err => console.error('Error: ', err));
+    });
+  </script>
+</body>
+</html>
