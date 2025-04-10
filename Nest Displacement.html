@@ -4,7 +4,7 @@
     <title>Nest Displacement - Notepad</title>
     <style>
         body {
-            background-color: #DCDBCE;
+            background-color: #d3d3d3;  /* 统一使用浅灰色 */
             margin: 0;
             padding: 0;
             display: flex;
@@ -98,7 +98,7 @@
             line-height: 1.6;
             margin: 0;
             padding: 0;
-            background-color: #DCDBCE;
+            background-color: #d3d3d3;
         }
         
         /* 内容项样式（来自原CMS） */
@@ -237,9 +237,214 @@
             cursor: se-resize;
             z-index: 1000;
         }
+
+        /* 保持现有的 body 样式，但添加新的布局样式 */
+        .ps-layout {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 40px 1fr 25px;
+            grid-template-columns: 60px 1fr;
+            pointer-events: none;  /* 确保不影响记事本窗口的交互 */
+            z-index: -1;  /* 放在记事本窗口下面 */
+        }
+
+        .ps-top-bar {
+            grid-column: 1 / 4;
+            background-color: #232324;
+            border-bottom: 1px solid #151515;
+        }
+
+        .ps-left-toolbar {
+            grid-row: 2 / 3;
+            background-color: #232324;
+            border-right: 1px solid #151515;
+        }
+
+        .ps-main-area {
+            grid-row: 2 / 3;
+            grid-column: 2 / 3;
+            background-color: #232324;  /* 与PS工具栏相同的深色背景 */
+        }
+
+        .ps-bottom-bar {
+            grid-column: 1 / 4;
+            background-color: #232324;
+            border-top: 1px solid #151515;
+        }
+
+        /* 添加菜单栏样式 */
+        .ps-menu {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 13px;
+            padding-left: 10px;
+        }
+
+        .ps-menu .app-name {
+            color: #ffffff;
+            opacity: 0.8;
+        }
+
+        /* 添加以下 CSS 样式到 style 标签中 */
+        .ps-tutorial {
+            position: fixed;
+            background-color: #2d2d2d;
+            border: 1px solid #3d3d3d;
+            border-radius: 6px;
+            padding: 20px;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            width: 300px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .ps-tutorial-content {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .ps-tutorial-button {
+            background-color: #0064ff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            float: right;
+        }
+
+        .ps-tutorial-button:hover {
+            background-color: #0056dd;
+        }
+
+        .ps-tutorial-steps {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #b4b4b4;
+        }
+
+        /* 添加新的样式到 style 标签中 */
+        .ps-home {
+            padding: 40px;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .ps-home-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .ps-home-title {
+            font-size: 24px;
+            font-weight: normal;
+            color: #ffffff;
+        }
+
+        .ps-hide-suggestions {
+            color: #8e8e8e;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .ps-feature-card {
+            background: #0064ff;
+            border-radius: 8px;
+            padding: 30px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .ps-feature-content {
+            flex: 1;
+        }
+
+        .ps-feature-title {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .ps-feature-description {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        .ps-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <div class="ps-layout">
+        <div class="ps-top-bar">
+            <div class="ps-menu">
+                <span class="app-name">PSLearner 2052</span>
+            </div>
+        </div>
+        <div class="ps-left-toolbar"></div>
+        <div class="ps-main-area">
+            <div class="ps-home">
+                <div class="ps-home-header">
+                    <h1 class="ps-home-title">Welcome to PSLearner 2052, Visitor</h1>
+                    <a href="#" class="ps-hide-suggestions">
+                        Hide suggestions
+                        <span>^</span>
+                    </a>
+                </div>
+                
+                <div class="ps-feature-card">
+                    <div class="ps-feature-content">
+                        <h2 class="ps-feature-title">Explore Kiwipedia in Notepad and unlock more features.</h2>
+                        <p class="ps-feature-description">Join the waitlist for this invite-only beta.</p>
+                    </div>
+                    <button class="ps-button">See more</button>
+                </div>
+            </div>
+        </div>
+        <div class="ps-bottom-bar"></div>
+    </div>
+
+    <div class="ps-tutorial">
+        <div class="ps-tutorial-content">
+            <h3 style="margin-top: 0; color: #0064ff;">Hi, world!</h3>
+            <p>This is PSLearner 2052</p>
+            <div class="ps-tutorial-steps">
+                Welcome to this interactive page!<br>
+                • You can drag the window via the blue title bar<br>
+                • The lower right corner allows you to resize the window<br>
+                • Content can be freely scrolled through<br>
+                Please remember, as you continue exploring the pages of Kiwipedia, you will gradually unlock some features of PS Learner2052. 
+            </div>
+        </div>
+        <button class="ps-tutorial-button" onclick="this.parentElement.style.display='none'">Get Start</button>
+    </div>
+
     <div class="notepad-window">
         <!-- 只保留右下角的调整手柄 -->
         <div class="resize-handle bottom-right"></div>
