@@ -1,222 +1,123 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Nest Displacement - Wikipedia</title>
+    <title>Search Start</title>
     <style>
         /* 基础样式 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            line-height: 1.6;
             margin: 0;
             padding: 0;
-            background-color: #DCDBCE;
-        }
-        
-        /* 内容项样式（来自原CMS） */
-        .content-item {
-            margin: 20px;
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            background-color: #DCDBCE;
-        }
-
-        /* 维基百科样式 */
-        #siteSub {
-            font-size: 0.875rem;
-            margin-top: 8px
-        }
-
-        #main-container {
+            height: 100vh;
             display: flex;
-            min-height: 100vh;
-        }
-
-        div.hatnote {
-            padding-left: 1.6em;
-            margin-bottom: 0.5em;
-            margin-top: 8px;
-            font-style: italic;
-        }
-        
-        #sidebar {
-            width: 200px;
+            justify-content: center;
+            align-items: center;
             background-color: #DCDBCE;
-            padding: 20px;
-            border-right: 1px solid #a7d7f9;
         }
-        
-        #content {
-            flex: 1;
-            padding: 20px 30px;
-            max-width: 960px;
+
+        /* 搜索容器 */
+        .search-container {
+            text-align: center;
         }
-        
-        .wiki-header {
-            border-bottom: 1px solid #a2a9b1;
+
+        /* logo样式 */
+        .logo {
+            font-size: 2.5em;
             margin-bottom: 20px;
-            padding-bottom: 10px;
-        }
-        
-        .wiki-nav {
-            background-color: #f8f9fa;
-            border: 1px solid #a2a9b1;
-            border-radius: 3px;
-            padding: 8px;
-            margin-bottom: 20px;
-        }
-        
-        h1 {
-            font-family: 'Linux Libertine', Georgia, Times, serif;
-            border-bottom: 1px solid #a2a9b1;
-            font-size: 28px;
-            font-weight: normal;
-        }
-        
-        h2 {
-            font-size: 20px;
-            border-bottom: 1px solid #a2a9b1;
-        }
-        
-        .toc {
-            background-color: #f8f9fa;
-            border: 1px solid #a2a9b1;
-            padding: 10px;
-            display: inline-block;
-            margin: 20px 0;
-        }
-        
-        .wiki-tools {
-            font-size: 0.875em;
-        }
-        
-        #left-navigation {
-            border-bottom: 1px solid #a2a9b1;
-            padding-bottom: 5px;
-        }
-        
-        .wiki-link {
-            color: #0645ad;
-            text-decoration: none;
-        }
-        
-        .wiki-link:hover {
-            text-decoration: underline;
+            font-family: 'Arial', sans-serif;
+            color: #333;
         }
 
-        /* 动态内容容器样式 */
-        #content-container {
-            margin: 20px;
+        /* 搜索框容器 */
+        .search-box-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
         }
 
-        img { 
-            margin-top: 10px; 
-            max-width: 100%;
+        /* 搜索框样式 */
+        #search-input {
+            width: 500px;
+            height: 44px;
+            padding: 0 15px;
+            font-size: 16px;
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            outline: none;
+            transition: box-shadow 0.2s;
         }
 
-        /* 导航列表样式 */
-        .navigation ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+        #search-input:hover,
+        #search-input:focus {
+            box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+            border-color: rgba(223,225,229,0);
         }
 
-        .navigation li {
-            margin: 8px 0;
+        /* 搜索按钮样式 */
+        #search-button {
+            height: 44px;
+            padding: 0 20px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 22px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
         }
 
-        /* 目录样式 */
-        .toc ul {
-            list-style: none;
-            padding-left: 20px;
-        }
-
-        .toc > ul {
-            padding-left: 0;
+        #search-button:hover {
+            background-color: #357abd;
         }
     </style>
 </head>
 <body>
-    <div id="main-container">
-        <div id="sidebar">
-            <div class="logo">Kiwipedia</div>
-            <div class="navigation">
-                <ul>
-                    <li><a href="#" class="wiki-link">Main page</a></li>
-                    <li><a href="#" class="wiki-link">Contents</a></li>
-                    <li><a href="#" class="wiki-link">Current events</a></li>
-                    <li><a href="#" class="wiki-link">Random article</a></li>
-                    <li><a href="#" class="wiki-link">About Wikipedia</a></li>
-                </ul>
-            </div>
-        </div>
-        
-        <div id="content">
-            <div id="left-navigation">
-                <span>Article</span> | <span>Talk</span>
-            </div>
-            
-            <div class="wiki-header">
-                <h1>Nest Displacement</h1>
-            </div>
-            
-            <div id="siteSub"  class="noprint" style="pointer-events: auto;">
-                From Wikipedia, thefree encyclopedia
-            </div> 
-
-            <div role="note" class="hatnote navigation-not-searchable" style="pointer-events: auto;">
-                "For other uses, see "
-                <a href="#">Nest Displacement (disambiguation)</a>
-                "
-            </div>
-
-            <div class="main-container">
-                Pet lovebirds often use their beaks to carefully cut pieces of paper and tuck them into their tail feathers. Despite being born and raised in artificial environments, they retain their instinctual drive as animals to collect diverse materials for nesting. Consequently, it's common to observe domestic lovebirds decorating themselves with objects produced by human society—resulting in a quirky yet fascinating sight. Inspired by this behavior, I've coined a new artistic term, Nest Displacement, to describe instinct-driven creative behaviors within artificial contexts, encompassing adaptation and mutation, or how individuals seek new possibilities within predefined structures. Another term, Nest-Grafting, combining the concepts of 'embedding' and 'nesting,' refers to an individual's appropriation and transformation of surrounding materials, describing artistic actions that incorporate heterogeneous elements into one's own system..
-            </div>
-
-            <!-- 动态内容容器 -->
-            <div id="content-container">
-                <!-- 内容将通过 CMS 动态加载 -->
-            </div>
-            
-            <div class="first-paragraph">
-                <p><strong>Nest Displacement</strong> refers to the phenomenon of birds relocating their nesting sites due to various environmental, human-induced, or natural factors.</p>
-            </div>
-            
-            <div class="toc">
-                <h2>Contents</h2>
-                <ul>
-                    <li>1. Definition</li>
-                    <li>2. Causes
-                        <ul>
-                            <li>2.1 Environmental factors</li>
-                            <li>2.2 Human interference</li>
-                            <li>2.3 Natural predators</li>
-                        </ul>
-                    </li>
-                    <li>3. Effects</li>
-                    <li>4. Conservation implications</li>
-                    <li>5. See also</li>
-                    <li>6. References</li>
-                </ul>
-            </div>
-            
-            <h2>Definition</h2>
-            <p>Nest displacement occurs when birds are forced to abandon or relocate their existing nests...</p>
-            
-            <h2>Causes</h2>
-            <h3>Environmental factors</h3>
-            <p>Climate change and habitat destruction are major contributors...</p>
-            
-            <div class="wiki-tools">
-                <hr>
-                <p>Categories: Ornithology | Bird behavior | Environmental terminology</p>
-            </div>
+    <div class="search-container">
+        <div class="logo">Search Start</div>
+        <div class="search-box-container">
+            <input type="text" id="search-input" placeholder="Search...">
+            <button id="search-button" onclick="performSearch()">Search</button>
         </div>
     </div>
 
-    <!-- 引入 Papa Parse 和 pull_content.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-    <script src="pull_content.js"></script>
+    <script>
+        const searchInput = document.getElementById('search-input');
+        const targetText = "Nest Displacement";
+        let currentIndex = 0;
+        
+        // 监听输入事件
+        searchInput.addEventListener('input', function() {
+            // 阻止默认输入
+            setTimeout(() => {
+                // 只有在未完成时才继续添加字符
+                if (currentIndex < targetText.length) {
+                    this.value = targetText.substring(0, currentIndex + 1);
+                    currentIndex++;
+                } else {
+                    // 保持完整文本
+                    this.value = targetText;
+                }
+            }, 10);
+        });
+
+        // 搜索功能
+        function performSearch() {
+            window.location.href = "Nest Displacement.html";
+        }
+
+        // 监听回车键
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // 当输入框失去焦点时重置计数器
+        searchInput.addEventListener('blur', function() {
+            currentIndex = 0;
+            this.value = '';
+        });
+    </script>
 </body>
 </html>
