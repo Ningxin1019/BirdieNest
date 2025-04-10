@@ -1,8 +1,97 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Nest Displacement - Wikipedia</title>
+    <title>Nest Displacement - Notepad</title>
     <style>
+        body {
+            background-color: #DCDBCE;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+        }
+
+        .notepad-window {
+            background-color: #c0c0c0;
+            border: 2px solid;
+            border-color: #ffffff #808080 #808080 #ffffff;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+            width: 497px;
+            height: 640px;
+            position: absolute;
+            resize: both;
+            overflow: auto;
+            min-width: 200px;
+            min-height: 200px;
+            cursor: default;
+        }
+
+        .title-bar {
+            background-color: #000080;
+            color: white;
+            padding: 3px 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Pixelated MS Sans Serif', Arial;
+            font-size: 13px;
+            cursor: move; /* 鼠标变为移动图标 */
+            user-select: none; /* 防止文字被选中 */
+        }
+
+        .title-bar-text {
+            font-weight: bold;
+        }
+
+        .title-bar-controls {
+            display: flex;
+            gap: 2px;
+        }
+
+        .title-bar-button {
+            width: 16px;
+            height: 14px;
+            background-color: #c0c0c0;
+            border: 1px solid;
+            border-color: #ffffff #808080 #808080 #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+        }
+
+        /* 内容区域（维基百科页面容器） */
+        .notepad-content {
+            background-color: white;
+            height: calc(100% - 25px);
+            overflow: auto;
+            border: 1px solid #808080;
+            border-top: 2px solid #808080;
+        }
+
+        /* 原维基百科样式保持不变，但需要调整一些边距 */
+        #main-container {
+            min-height: auto;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap; /* 允许在小屏幕上换行 */
+        }
+
+        #content {
+            padding: 15px;
+            flex: 1;
+            min-width: 300px;
+            overflow-x: hidden;
+        }
+
+        /* 其他维基百科样式保持不变 */
         /* 基础样式 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -27,11 +116,6 @@
             margin-top: 8px
         }
 
-        #main-container {
-            display: flex;
-            min-height: 100vh;
-        }
-
         div.hatnote {
             padding-left: 1.6em;
             margin-bottom: 0.5em;
@@ -44,12 +128,8 @@
             background-color: #DCDBCE;
             padding: 20px;
             border-right: 1px solid #a7d7f9;
-        }
-        
-        #content {
-            flex: 1;
-            padding: 20px 30px;
-            max-width: 960px;
+            flex: 0 0 200px; /* 固定宽度 */
+            min-width: 150px;
         }
         
         .wiki-header {
@@ -134,83 +214,122 @@
         .toc > ul {
             padding-left: 0;
         }
+
+        @media (max-width: 768px) {
+            #main-container {
+                flex-direction: column;
+            }
+            
+            #sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #a7d7f9;
+            }
+        }
+
+        /* 简化为单一类 */
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            bottom: 0;
+            right: 0;
+            cursor: se-resize;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
-    <div id="main-container">
-        <div id="sidebar">
-            <div class="logo">Kiwipedia</div>
-            <div class="navigation">
-                <ul>
-                    <li><a href="#" class="wiki-link">Main page</a></li>
-                    <li><a href="#" class="wiki-link">Contents</a></li>
-                    <li><a href="#" class="wiki-link">Current events</a></li>
-                    <li><a href="#" class="wiki-link">Random article</a></li>
-                    <li><a href="#" class="wiki-link">About Wikipedia</a></li>
-                </ul>
+    <div class="notepad-window">
+        <!-- 只保留右下角的调整手柄 -->
+        <div class="resize-handle bottom-right"></div>
+
+        <div class="title-bar">
+            <div class="title-bar-text">Notepad</div>
+            <div class="title-bar-controls">
+                <button class="title-bar-button">_</button>
+                <button class="title-bar-button">□</button>
+                <button class="title-bar-button">×</button>
             </div>
         </div>
-        
-        <div id="content">
-            <div id="left-navigation">
-                <span>Article</span> | <span>Talk</span>
-            </div>
-            
-            <div class="wiki-header">
-                <h1>Nest Displacement</h1>
-            </div>
-            
-            <div id="siteSub"  class="noprint" style="pointer-events: auto;">
-                From Wikipedia, thefree encyclopedia
-            </div> 
-
-            <div role="note" class="hatnote navigation-not-searchable" style="pointer-events: auto;">
-                "For other uses, see "
-                <a href="#">Nest Displacement (disambiguation)</a>
-                "
-            </div>
-
-            <div class="main-container">
-                Pet lovebirds often use their beaks to carefully cut pieces of paper and tuck them into their tail feathers. Despite being born and raised in artificial environments, they retain their instinctual drive as animals to collect diverse materials for nesting. Consequently, it's common to observe domestic lovebirds decorating themselves with objects produced by human society—resulting in a quirky yet fascinating sight. Inspired by this behavior, I've coined a new artistic term, Nest Displacement, to describe instinct-driven creative behaviors within artificial contexts, encompassing adaptation and mutation, or how individuals seek new possibilities within predefined structures. Another term, Nest-Grafting, combining the concepts of 'embedding' and 'nesting,' refers to an individual's appropriation and transformation of surrounding materials, describing artistic actions that incorporate heterogeneous elements into one's own system..
-            </div>
-
-            <!-- 动态内容容器 -->
-            <div id="content-container">
-                <!-- 内容将通过 CMS 动态加载 -->
-            </div>
-            
-            <div class="first-paragraph">
-                <p><strong>Nest Displacement</strong> refers to the phenomenon of birds relocating their nesting sites due to various environmental, human-induced, or natural factors.</p>
-            </div>
-            
-            <div class="toc">
-                <h2>Contents</h2>
-                <ul>
-                    <li>1. Definition</li>
-                    <li>2. Causes
+        <div class="notepad-content">
+            <!-- 原维基百科内容放在这里 -->
+            <div id="main-container">
+                <div id="sidebar">
+                    <div class="logo">Kiwipedia</div>
+                    <div class="navigation">
                         <ul>
-                            <li>2.1 Environmental factors</li>
-                            <li>2.2 Human interference</li>
-                            <li>2.3 Natural predators</li>
+                            <li><a href="#" class="wiki-link">Main page</a></li>
+                            <li><a href="#" class="wiki-link">Contents</a></li>
+                            <li><a href="#" class="wiki-link">Current events</a></li>
+                            <li><a href="#" class="wiki-link">Random article</a></li>
+                            <li><a href="#" class="wiki-link">About Wikipedia</a></li>
                         </ul>
-                    </li>
-                    <li>3. Effects</li>
-                    <li>4. Conservation implications</li>
-                    <li>5. See also</li>
-                    <li>6. References</li>
-                </ul>
-            </div>
-            
-            <h2>Definition</h2>
-            <p>Nest displacement occurs when birds are forced to abandon or relocate their existing nests...</p>
-            
-            <h2>Causes</h2>
-            <h3>Environmental factors</h3>
-            <p>Climate change and habitat destruction are major contributors...</p>
-            
-            <div class="wiki-tools">
-                <hr>
-                <p>Categories: Ornithology | Bird behavior | Environmental terminology</p>
+                    </div>
+                </div>
+                
+                <div id="content">
+                    <div id="left-navigation">
+                        <span>Article</span> | <span>Talk</span>
+                    </div>
+                    
+                    <div class="wiki-header">
+                        <h1>Nest Displacement</h1>
+                    </div>
+                    
+                    <div id="siteSub"  class="noprint" style="pointer-events: auto;">
+                        From Wikipedia, thefree encyclopedia
+                    </div> 
+
+                    <div role="note" class="hatnote navigation-not-searchable" style="pointer-events: auto;">
+                        "For other uses, see "
+                        <a href="#">Nest Displacement (disambiguation)</a>
+                        "
+                    </div>
+
+                    <div class="main-container">
+                        Pet lovebirds often use their beaks to carefully cut pieces of paper and tuck them into their tail feathers. Despite being born and raised in artificial environments, they retain their instinctual drive as animals to collect diverse materials for nesting. Consequently, it's common to observe domestic lovebirds decorating themselves with objects produced by human society—resulting in a quirky yet fascinating sight. Inspired by this behavior, I've coined a new artistic term, Nest Displacement, to describe instinct-driven creative behaviors within artificial contexts, encompassing adaptation and mutation, or how individuals seek new possibilities within predefined structures. Another term, Nest-Grafting, combining the concepts of 'embedding' and 'nesting,' refers to an individual's appropriation and transformation of surrounding materials, describing artistic actions that incorporate heterogeneous elements into one's own system..
+                    </div>
+
+                    <!-- 动态内容容器 -->
+                    <div id="content-container">
+                        <!-- 内容将通过 CMS 动态加载 -->
+                    </div>
+                    
+                    <div class="first-paragraph">
+                        <p><strong>Nest Displacement</strong> refers to the phenomenon of birds relocating their nesting sites due to various environmental, human-induced, or natural factors.</p>
+                    </div>
+                    
+                    <div class="toc">
+                        <h2>Contents</h2>
+                        <ul>
+                            <li>1. Definition</li>
+                            <li>2. Causes
+                                <ul>
+                                    <li>2.1 Environmental factors</li>
+                                    <li>2.2 Human interference</li>
+                                    <li>2.3 Natural predators</li>
+                                </ul>
+                            </li>
+                            <li>3. Effects</li>
+                            <li>4. Conservation implications</li>
+                            <li>5. See also</li>
+                            <li>6. References</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>Definition</h2>
+                    <p>Nest displacement occurs when birds are forced to abandon or relocate their existing nests...</p>
+                    
+                    <h2>Causes</h2>
+                    <h3>Environmental factors</h3>
+                    <p>Climate change and habitat destruction are major contributors...</p>
+                    
+                    <div class="wiki-tools">
+                        <hr>
+                        <p>Categories: Ornithology | Bird behavior | Environmental terminology</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -218,5 +337,99 @@
     <!-- 引入 Papa Parse 和 pull_content.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="pull_content.js"></script>
+
+    <script>
+        // 拖拽功能
+        const notepadWindow = document.querySelector('.notepad-window');
+        const titleBar = document.querySelector('.title-bar');
+        let isDragging = false;
+        let initialX, initialY;
+
+        // 初始化窗口位置
+        function centerWindow() {
+            const windowWidth = notepadWindow.offsetWidth;
+            const windowHeight = notepadWindow.offsetHeight;
+            const centerX = (window.innerWidth - windowWidth) / 2;
+            const centerY = (window.innerHeight - windowHeight) / 2;
+            
+            notepadWindow.style.left = centerX + 'px';
+            notepadWindow.style.top = centerY + 'px';
+        }
+
+        document.addEventListener('DOMContentLoaded', centerWindow);
+
+        function dragStart(e) {
+            if (e.target === titleBar || e.target.parentElement === titleBar) {
+                isDragging = true;
+                const rect = notepadWindow.getBoundingClientRect();
+                initialX = e.clientX - rect.left;
+                initialY = e.clientY - rect.top;
+            }
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                const newX = Math.min(Math.max(0, e.clientX - initialX), 
+                    window.innerWidth - notepadWindow.offsetWidth);
+                const newY = Math.min(Math.max(0, e.clientY - initialY), 
+                    window.innerHeight - notepadWindow.offsetHeight);
+                
+                notepadWindow.style.left = newX + 'px';
+                notepadWindow.style.top = newY + 'px';
+            }
+        }
+
+        titleBar.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', () => isDragging = false);
+
+        // 调整大小功能
+        const handle = document.querySelector('.resize-handle');
+        let isResizing = false;
+        let initialWidth, initialHeight, startX, startY;
+
+        function initResize(e) {
+            isResizing = true;
+            isDragging = false;
+            
+            const rect = notepadWindow.getBoundingClientRect();
+            initialWidth = rect.width;
+            initialHeight = rect.height;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+            e.preventDefault();
+        }
+
+        function resize(e) {
+            if (!isResizing) return;
+
+            const rect = notepadWindow.getBoundingClientRect();
+            const newWidth = Math.min(
+                Math.max(200, initialWidth + e.clientX - startX),
+                window.innerWidth - rect.left
+            );
+            const newHeight = Math.min(
+                Math.max(200, initialHeight + e.clientY - startY),
+                window.innerHeight - rect.top
+            );
+
+            notepadWindow.style.width = `${newWidth}px`;
+            notepadWindow.style.height = `${newHeight}px`;
+        }
+
+        function stopResize() {
+            if (isResizing) {
+                isResizing = false;
+                document.removeEventListener('mousemove', resize);
+                document.removeEventListener('mouseup', stopResize);
+            }
+        }
+
+        handle.addEventListener('mousedown', initResize);
+    </script>
 </body>
 </html>
