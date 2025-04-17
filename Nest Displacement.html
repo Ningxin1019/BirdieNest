@@ -666,6 +666,17 @@
 
         document.addEventListener('DOMContentLoaded', centerWindow);
 
+        // 防止标题栏接收文本拖放
+        titleBar.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        titleBar.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
         function dragStart(e) {
             if (e.target === titleBar || e.target.parentElement === titleBar) {
                 isDragging = true;
