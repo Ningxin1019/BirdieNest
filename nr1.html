@@ -12,6 +12,7 @@
       background-color: #fff;
       color: #000;
       overflow: hidden;
+      filter: grayscale(100%); /* 添加这一行，使整个页面变成黑白 */
     }
 
     .initial-state {
@@ -203,6 +204,208 @@
       top: 50%;
       right: 25%;
     }
+
+    /* 简化提示元素的样式，移除过渡动画 */
+    .unlock-text {
+      position: absolute;
+      left: 25%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-family: monospace;
+      font-size: 18px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 1000;
+    }
+
+    .unlock-emoji {
+      position: absolute;
+      right: 25%;
+      top: 50%;
+      transform: translate(50%, -50%);
+      font-size: 48px;
+      opacity: 0;
+      visibility: hidden;
+      z-index: 1000;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 添加弹性动画 */
+    }
+
+    /* 添加悬停效果 */
+    .unlock-emoji:hover {
+      transform: translate(50%, -50%) rotate(-15deg) scale(1.2);
+      animation: wiggle 0.5s infinite alternate;
+    }
+
+    /* 添加摇晃动画 */
+    @keyframes wiggle {
+      0% {
+        transform: translate(50%, -50%) rotate(-15deg) scale(1.2);
+      }
+      100% {
+        transform: translate(50%, -50%) rotate(15deg) scale(1.2);
+      }
+    }
+
+    /* 简化显示类 */
+    .unlock-text.show,
+    .unlock-emoji.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* 修改星号按钮样式，确保只有一处定义颜色 */
+    .star-button {
+      position: fixed;
+      top: 17px;
+      left: 20px;
+      font-family: monospace;
+      font-size: 24px;
+      user-select: none;
+      z-index: 2000;
+      display: none;
+      color: #000 !important; /* 使用 !important 确保颜色不被其他样式覆盖 */
+      pointer-events: none;
+    }
+
+    .star-button.unlocked {
+      pointer-events: auto;
+      cursor: pointer;
+      /* 移除任何颜色相关的样式 */
+    }
+
+    /* 修改菜单样式 */
+    .effects-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      padding: 20px;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      display: none;
+      z-index: 1999;
+      background: white;
+    }
+
+    .menu-title {
+      margin-bottom: 20px;
+      margin-left: 35px; /* 与星号对齐 */
+      white-space: pre;
+    }
+
+    .section-title {
+      white-space: pre;
+      margin-left: 45px; /* 比星号位置稍微靠右一点 */
+      margin-top: -20px; /* 上移到与星号同一水平线 */
+    }
+
+    .effects-list {
+      margin-left: 2px;
+      margin-top: 10px; /* 从20px改为10px，向上移动10像素 */
+      white-space: pre;
+    }
+
+    .effect-item {
+      display: flex;
+      align-items: center;
+      gap: 10px; /* 添加选项框和文字之间的间距 */
+      color: #888;
+      cursor: default;
+    }
+
+    .effect-item.unlocked {
+      color: #000;
+      cursor: pointer;
+    }
+
+    .checkbox {
+      font-family: monospace;
+      user-select: none;
+    }
+
+    /* 选中状态的样式 */
+    .effect-item.checked .checkbox {
+      content: '[*]';
+    }
+
+    /* 修改子菜单样式 */
+    .color-submenu {
+      position: fixed;
+      top: 0;
+      right: 0; /* 改为0，直接贴住右边 */
+      background: white;
+      padding: 20px;
+      font-family: monospace;
+      font-size: 14px;
+      display: none;
+      z-index: 1998;
+    }
+
+    .slider-group {
+      margin-bottom: 30px; /* 增加滑块组之间的间距 */
+      width: 200px; /* 固定宽度 */
+    }
+
+    .slider-label {
+      margin-bottom: 10px;
+      white-space: pre;
+    }
+
+    .color-slider {
+      width: 100%; /* 使用父元素的宽度 */
+      -webkit-appearance: none;
+      height: 2px;
+      background: #000;
+      outline: none;
+      position: relative;
+    }
+
+    .color-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 10px;
+      height: 20px;
+      background: #000;
+      cursor: pointer;
+    }
+
+    /* 添加滑块两端的线条 */
+    .color-slider::before,
+    .color-slider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 20px;
+      height: 2px;
+      background: #000;
+    }
+
+    .color-slider::before {
+      left: -20px;
+    }
+
+    .color-slider::after {
+      right: -20px;
+    }
+
+    /* 添加禁用状态的样式 */
+    .effect-checkbox[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .effect-item {
+      opacity: 0.5; /* 初始状态显示为半透明 */
+      transition: opacity 0.3s ease;
+    }
+
+    .effect-item.unlocked {
+      opacity: 1; /* 解锁后显示为完全不透明 */
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -215,6 +418,8 @@
   <!-- 隐藏的内容，等待解锁 -->
   <div id="journey-content" class="hidden">
     <div class="journey-stage-1">
+      <div class="unlock-emoji">🎁</div>
+      <div class="unlock-text">Colors unlocked</div>
       <div class="feather-outline">
         <div class="notepad-title">
           <span>Untitled - Notepad</span>
@@ -233,6 +438,37 @@
     <!-- 最终的生成器工具 -->
   </div>
 
+  <!-- 修改菜单HTML结构 -->
+  <div class="star-button">*</div>
+  <div class="effects-menu">
+    <div class="menu-title">Nest Displacement</div>
+    <div class="menu-section">
+      <div class="section-title">/EFFECTS</div>
+      <div class="effects-list">
+        <div class="effect-item">
+          <span class="checkbox">[ ]</span>
+          <span class="effect-name">COLOR</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加颜色控制子菜单 -->
+  <div class="color-submenu">
+    <div class="slider-group">
+      <div class="slider-label">HUE</div>
+      <input type="range" class="color-slider" id="hueSlider" min="0" max="360" value="180">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label">BRIGHTNESS</div>
+      <input type="range" class="color-slider" id="brightnessSlider" min="0" max="100" value="50">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label">SATURATION</div>
+      <input type="range" class="color-slider" id="saturationSlider" min="0" max="100" value="50">
+    </div>
+  </div>
+
   <script>
     // 添加文本数组
     const textSequence = [
@@ -247,11 +483,18 @@
     ];
 
     let currentTextIndex = 0;
+    let isColorUnlocked = false; // 添加一个状态标记
+    let isMenuUnlocked = false;
 
     function startJourney() {
       document.querySelector('.initial-state').style.display = 'none';
       const journeyContent = document.getElementById('journey-content');
       journeyContent.classList.remove('hidden');
+      
+      // 显示星号按钮，确保是黑色
+      const starButton = document.querySelector('.star-button');
+      starButton.style.display = 'block';
+      starButton.style.color = '#000'; // 确保显示时就是黑色
       
       setTimeout(() => {
         const stage1 = document.querySelector('.journey-stage-1');
@@ -272,12 +515,17 @@
 
     function initDragAndDrop() {
       const dropZone = document.getElementById('dropZone');
+      const notepad = document.querySelector('.feather-outline');
       
-      // 防止默认拖放行为
-      document.addEventListener('dragover', (e) => e.preventDefault());
-      document.addEventListener('drop', (e) => e.preventDefault());
+      // 防止记事本窗口接收拖放
+      notepad.addEventListener('dragover', (e) => {
+        if (e.target !== dropZone && !dropZone.contains(e.target)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      });
 
-      // 添加拖放区域的事件监听
+      // 只允许内容区域接收拖放
       dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropZone.style.backgroundColor = '#f0f0f0';
@@ -292,6 +540,18 @@
 
     function showNextText() {
       if (currentTextIndex >= textSequence.length) {
+        // 解锁菜单
+        const starButton = document.querySelector('.star-button');
+        starButton.classList.add('unlocked');
+        
+        // 解锁 COLOR 选项
+        isColorUnlocked = true;
+        const colorEffect = document.querySelector('.effect-item');
+        colorEffect.classList.add('unlocked');
+        const checkbox = colorEffect.querySelector('.checkbox');
+        checkbox.disabled = false;
+        
+        showUnlockEffects();
         startStage2();
         return;
       }
@@ -323,7 +583,13 @@
 
     function handleDrop(e) {
       e.preventDefault();
+      
+      // 确保只有内容区域可以接收拖放
       const dropZone = document.getElementById('dropZone');
+      if (e.target !== dropZone && !dropZone.contains(e.target)) {
+        return; // 如果不是拖到内容区域，直接返回
+      }
+
       dropZone.style.backgroundColor = '#ffffff';
 
       // 获取拖动的文本
@@ -365,21 +631,6 @@
       dropZone.focus();
     }
 
-    function adjustCollectedTexts() {
-      const collectedTexts = document.querySelectorAll('.collected-text');
-      const totalTexts = collectedTexts.length;
-      
-      // 根据文本数量调整字体大小
-      collectedTexts.forEach((text, index) => {
-        // 第一段文本最大，之后逐渐减小
-        const fontSize = Math.max(12 - (index * 0.5), 10);
-        text.style.fontSize = `${fontSize}px`;
-        
-        // 添加渐变的透明度
-        text.style.opacity = 1 - (index * 0.1);
-      });
-    }
-
     function getRandomPosition() {
       const padding = 50;
       const maxWidth = window.innerWidth - 400;
@@ -403,7 +654,7 @@
 
     function startStage2() {
       document.body.classList.add('stage-1');
-      // 这里后续添加第二阶段内容
+      // 不再自动移除滤镜，等待用户点击礼物
     }
 
     function activateAllFeatures() {
@@ -441,6 +692,155 @@
         }
       });
     }
+
+    // 添加随机颜色生成函数
+    function getRandomPastelColor() {
+      // 生成柔和的颜色
+      const hue = Math.floor(Math.random() * 360); // 随机色相
+      const saturation = 30 + Math.random() * 20; // 30-50%的饱和度
+      const lightness = 85 + Math.random() * 10; // 85-95%的亮度
+      return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+
+    // 修改 showUnlockEffects 函数
+    function showUnlockEffects() {
+      const emoji = document.querySelector('.unlock-emoji');
+      const text = document.querySelector('.unlock-text');
+      const notepad = document.querySelector('.feather-outline');
+      
+      // 获取记事本的位置信息
+      const notepadRect = notepad.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      
+      // 计算左右区域的中点
+      const leftAreaCenter = notepadRect.left / 2;
+      const rightAreaCenter = (windowWidth - notepadRect.right) / 2 + notepadRect.right;
+      
+      // 设置文字和emoji的位置
+      text.style.left = `${leftAreaCenter}px`;
+      emoji.style.right = `${windowWidth - rightAreaCenter}px`;
+      
+      // 显示元素
+      text.classList.add('show');
+      emoji.classList.add('show');
+
+      // 添加点击事件
+      emoji.addEventListener('click', unlockColors);
+    }
+
+    // 修改 unlockColors 函数
+    function unlockColors() {
+      const emoji = document.querySelector('.unlock-emoji');
+      const text = document.querySelector('.unlock-text');
+      
+      // 移除黑白滤镜
+      document.body.style.transition = 'filter 1s ease, background-color 1s ease';
+      document.body.style.filter = 'grayscale(0%)';
+      
+      // 设置随机背景色
+      document.body.style.backgroundColor = getRandomPastelColor();
+      
+      // 移除提示元素
+      emoji.style.visibility = 'hidden';
+      text.style.visibility = 'hidden';
+      
+      // 解锁菜单
+      isMenuUnlocked = true;
+      const starButton = document.querySelector('.star-button');
+      starButton.classList.add('unlocked');
+      
+      // 解锁 COLOR 选项
+      isColorUnlocked = true;
+      const colorEffect = document.querySelector('.effect-item');
+      colorEffect.classList.add('unlocked');
+      const checkbox = colorEffect.querySelector('.checkbox');
+      checkbox.disabled = false;
+      
+      // 移除点击事件，防止重复触发
+      emoji.removeEventListener('click', unlockColors);
+    }
+
+    // 添加位置检查和调整函数
+    function adjustSubmenuPosition() {
+      const submenu = document.querySelector('.color-submenu');
+      if (!submenu || submenu.style.display === 'none') return;
+
+      const rect = submenu.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+
+      // 检查是否超出视窗底部
+      if (rect.bottom > windowHeight) {
+        // 调整位置，确保在视窗内
+        submenu.style.top = 'auto';
+        submenu.style.bottom = '20px';
+        submenu.style.transform = 'none';
+      }
+    }
+
+    // 修改颜色控制逻辑
+    function initializeColorControl() {
+      const colorEffect = document.querySelector('.effect-item');
+      const colorSubmenu = document.querySelector('.color-submenu');
+      const hueSlider = document.getElementById('hueSlider');
+      const brightnessSlider = document.getElementById('brightnessSlider');
+      const saturationSlider = document.getElementById('saturationSlider');
+      let isChecked = false;
+
+      // 点击 COLOR 选项的处理
+      colorEffect.addEventListener('click', (e) => {
+        if (!colorEffect.classList.contains('unlocked')) return;
+
+        isChecked = !isChecked;
+        const checkbox = colorEffect.querySelector('.checkbox');
+        checkbox.textContent = isChecked ? '[*]' : '[ ]';
+        colorEffect.classList.toggle('checked');
+        colorSubmenu.style.display = isChecked ? 'block' : 'none';
+      });
+
+      // 滑块控制颜色
+      function updateColor() {
+        const hue = hueSlider.value;
+        const brightness = brightnessSlider.value;
+        const saturation = saturationSlider.value;
+        
+        document.body.style.backgroundColor = 
+          `hsl(${hue}, ${saturation}%, ${brightness}%)`;
+      }
+
+      // 添加滑块事件监听
+      hueSlider.addEventListener('input', updateColor);
+      brightnessSlider.addEventListener('input', updateColor);
+      saturationSlider.addEventListener('input', updateColor);
+    }
+
+    // 修改星号按钮的初始化
+    function initializeMenu() {
+      const starButton = document.querySelector('.star-button');
+      const menu = document.querySelector('.effects-menu');
+      let isMenuOpen = false;
+
+      starButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!isMenuUnlocked) return;
+
+        isMenuOpen = !isMenuOpen;
+        menu.style.display = isMenuOpen ? 'block' : 'none';
+      });
+
+      document.addEventListener('click', (e) => {
+        if (isMenuOpen && !menu.contains(e.target)) {
+          isMenuOpen = false;
+          menu.style.display = 'none';
+        }
+      });
+
+      initializeColorControl();
+    }
+
+    // 添加窗口大小改变时的位置调整
+    window.addEventListener('resize', adjustSubmenuPosition);
+
+    document.addEventListener('DOMContentLoaded', initializeMenu);
   </script>
 </body>
 </html>
