@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nest Displacement</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background-color: #f5f5f5;
+      overflow: hidden;
+    }
+    #feather {
+      position: absolute;
+      width: 200px;
+      height: 400px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: url('feather_placeholder.png') center/contain no-repeat;
+      z-index: 1;
+    }
+    .fragment {
+      position: absolute;
+      background-color: white;
+      border: 1px dashed #aaa;
+      padding: 10px;
+      cursor: grab;
+      user-select: none;
+      z-index: 2;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="feather"></div>
+  
+  <div class="fragment" style="top:20%;left:10%;">Welcome: This is a living zine.</div>
+  <div class="fragment" style="top:30%;left:70%;">Statement: Even in artificial habitats...</div>
+  <div class="fragment" style="top:60%;left:40%;">Instinct persists. Creation adapts.</div>
+  <div class="fragment" style="top:50%;left:20%;">What do you collect to feel like yourself?</div>
+  <div class="fragment" style="top:70%;left:60%;">Insert to reveal your shape.</div>
+
+  <script>
+    let collected = 0;
+    const fragments = document.querySelectorAll('.fragment');
+    const feather = document.getElementById('feather');
+
+    fragments.forEach(frag => {
+      frag.addEventListener('click', () => {
+        frag.classList.add('hidden');
+        collected++;
+        applyStage(collected);
+      });
+    });
+
+    function applyStage(stage) {
+      switch(stage) {
+        case 1:
+          document.body.style.backgroundColor = '#e0f7fa';
+          break;
+        case 2:
+          const audio = new Audio('ambient_sound.mp3');
+          audio.loop = true;
+          audio.play();
+          break;
+        case 3:
+          const nav = document.createElement('nav');
+          nav.innerHTML = '<a href="#">About</a> | <a href="#">Fragments</a> | <a href="#">Build</a>';
+          nav.style.position = 'fixed';
+          nav.style.bottom = '10px';
+          nav.style.left = '50%';
+          nav.style.transform = 'translateX(-50%)';
+          nav.style.background = '#fff';
+          nav.style.padding = '8px 16px';
+          nav.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+          document.body.appendChild(nav);
+          break;
+        case 4:
+          const input = document.createElement('textarea');
+          input.placeholder = 'Write your fragment here...';
+          input.style.position = 'fixed';
+          input.style.bottom = '60px';
+          input.style.left = '50%';
+          input.style.transform = 'translateX(-50%)';
+          input.style.width = '60%';
+          input.style.height = '60px';
+          document.body.appendChild(input);
+          break;
+        case 5:
+          window.location.href = 'tailmap.html';
+          break;
+      }
+    }
+  </script>
+</body>
+</html>
