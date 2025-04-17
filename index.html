@@ -159,11 +159,12 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      user-select: none;  /* 防止文本被选中 */
+      pointer-events: none;  /* 防止标题栏接收拖拽事件 */
     }
 
     .notepad-title-buttons {
-      display: flex;
-      gap: 2px;
+      pointer-events: auto;  /* 恢复按钮的点击功能 */
     }
 
     .title-button {
@@ -215,6 +216,8 @@
       min-height: 250px;
       outline: none;
       caret-color: #000;
+      position: relative;  /* 添加相对定位 */
+      z-index: 1;  /* 确保内容区在正确的层级 */
     }
 
     .notepad-content::selection {
@@ -742,14 +745,27 @@
       // 只允许内容区域接收拖放
       dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();  // 添加阻止事件冒泡
         dropZone.style.backgroundColor = '#f0f0f0';
       });
 
-      dropZone.addEventListener('dragleave', () => {
+      dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();  // 添加阻止默认行为
+        e.stopPropagation();  // 添加阻止事件冒泡
         dropZone.style.backgroundColor = '#ffffff';
       });
 
-      dropZone.addEventListener('drop', handleDrop);
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();  // 添加阻止事件冒泡
+        
+        // 确保只有内容区域可以接收拖放
+        if (e.target !== dropZone && !dropZone.contains(e.target)) {
+          return;
+        }
+
+        handleDrop(e);
+      });
     }
 
     function showNextText() {
