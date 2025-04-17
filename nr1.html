@@ -8,93 +8,438 @@
     body {
       margin: 0;
       padding: 0;
-      font-family: sans-serif;
-      background-color: #f5f5f5;
+      font-family: monospace; /* 使用等宽字体营造复古感 */
+      background-color: #fff;
+      color: #000;
       overflow: hidden;
     }
-    #feather {
-      position: absolute;
-      width: 200px;
-      height: 400px;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: url('feather_placeholder.png') center/contain no-repeat;
-      z-index: 1;
+
+    .initial-state {
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
-    .fragment {
+
+    .hello {
       position: absolute;
-      background-color: white;
-      border: 1px dashed #aaa;
-      padding: 10px;
-      cursor: grab;
-      user-select: none;
-      z-index: 2;
+      top: 20px;
+      left: 20px;
+      font-size: 14px;
     }
+
+    .start-button {
+      font-family: monospace;
+      font-size: 16px;
+      padding: 10px 20px;
+      margin: 20px;
+      background: none;
+      border: 1px solid #000;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .start-button:hover {
+      background-color: #000;
+      color: #fff;
+    }
+
+    .skip-link {
+      font-size: 12px;
+      color: #666;
+      text-decoration: none;
+      margin-top: 10px;
+    }
+
+    .skip-link:hover {
+      text-decoration: underline;
+    }
+
+    /* 隐藏的内容，等待解锁 */
     .hidden {
       display: none;
+    }
+
+    /* 解锁后的样式变化 */
+    .stage-1 {
+      background-color: #f5f5f5;
+      transition: background-color 2s ease;
+    }
+
+    .stage-2 {
+      font-family: 'Times New Roman', serif;
+      transition: font-family 1s ease;
+    }
+
+    .stage-3 {
+      color: #333;
+      transition: color 1s ease;
+    }
+
+    /* 添加新的样式 */
+    .journey-stage-1 {
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    .text-fragment {
+      position: absolute;
+      padding: 10px;
+      background: #fff;
+      border: 1px solid #000;
+      cursor: move;
+      font-size: 14px;
+      max-width: 300px;
+      text-align: left;
+      transition: all 0.3s ease;
+      opacity: 0;
+      line-height: 1.6;
+      user-select: none;
+    }
+
+    .text-fragment.visible {
+      opacity: 1;
+    }
+
+    .text-fragment:hover {
+      transform: scale(1.02);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .collected-text {
+      font-size: 12px;
+      line-height: 1.6;
+      margin: 0;
+      padding: 5px 0;
+      transition: all 0.5s ease;
+    }
+
+    .collected-text:not(:last-child) {
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .feather-outline {
+      position: absolute;
+      width: 500px;
+      min-height: 300px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      border: 2px solid;
+      border-color: #dfdfdf #808080 #808080 #dfdfdf;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      font-family: 'MS Sans Serif', Arial, sans-serif;
+    }
+
+    /* 记事本标题栏 */
+    .notepad-title {
+      background: #000080;
+      color: white;
+      padding: 3px 5px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .notepad-title-buttons {
+      display: flex;
+      gap: 2px;
+    }
+
+    .title-button {
+      width: 16px;
+      height: 14px;
+      background: #c0c0c0;
+      border: 1px solid;
+      border-color: #ffffff #808080 #808080 #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 10px;
+    }
+
+    /* 记事本内容区 */
+    .notepad-content {
+      flex: 1;
+      padding: 10px;
+      background: #ffffff;
+      border: 1px solid #808080;
+      border-top: 2px solid #808080;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-y: auto;
+      min-height: 250px;
+      outline: none;
+      caret-color: #000;
+    }
+
+    .notepad-content::selection {
+      background: #000080;
+      color: #fff;
+    }
+
+    /* 文本碎片的初始位置 */
+    .text-fragment:nth-child(1) {
+      top: 30%;
+      left: 20%;
+    }
+
+    .text-fragment:nth-child(2) {
+      top: 50%;
+      right: 25%;
     }
   </style>
 </head>
 <body>
-  <div id="feather"></div>
-  
-  <div class="fragment" style="top:20%;left:10%;">Welcome: This is a living zine.</div>
-  <div class="fragment" style="top:30%;left:70%;">Statement: Even in artificial habitats...</div>
-  <div class="fragment" style="top:60%;left:40%;">Instinct persists. Creation adapts.</div>
-  <div class="fragment" style="top:50%;left:20%;">What do you collect to feel like yourself?</div>
-  <div class="fragment" style="top:70%;left:60%;">Insert to reveal your shape.</div>
+  <div class="initial-state">
+    <div class="hello">Hello, world!</div>
+    <button class="start-button" onclick="startJourney()">Start</button>
+    <a href="#" class="skip-link" onclick="skipToNest()">Skip to nest</a>
+  </div>
+
+  <!-- 隐藏的内容，等待解锁 -->
+  <div id="journey-content" class="hidden">
+    <div class="journey-stage-1">
+      <div class="feather-outline">
+        <div class="notepad-title">
+          <span>Untitled - Notepad</span>
+          <div class="notepad-title-buttons">
+            <button class="title-button">_</button>
+            <button class="title-button">□</button>
+            <button class="title-button">×</button>
+          </div>
+        </div>
+        <div class="notepad-content" id="dropZone" contenteditable="true" spellcheck="false"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="nest-generator" class="hidden">
+    <!-- 最终的生成器工具 -->
+  </div>
 
   <script>
-    let collected = 0;
-    const fragments = document.querySelectorAll('.fragment');
-    const feather = document.getElementById('feather');
+    // 添加文本数组
+    const textSequence = [
+      "Pet lovebirds often use their beaks to carefully cut pieces of paper and tuck them into their tail feathers.",
+      "Despite being born and raised in artificial environments, they retain their instinctual drive as animals to collect diverse materials for nesting.",
+      "Consequently, it's common to observe domestic lovebirds decorating themselves with objects produced by human society,",
+      "resulting in a quirky yet fascinating sight. Inspired by this behavior,",
+      "I've coined a new artistic term, Nest Displacement, to describe instinct-driven creative behaviors within artificial contexts, encompassing adaptation and mutation,",
+      "or how individuals seek new possibilities within predefined structures.",
+      "Another term, Nest-Grafting, combining the concepts of 'embedding' and 'nesting,'",
+      "refers to an individual's appropriation and transformation of surrounding materials, describing artistic actions that incorporate heterogeneous elements into one's own system."
+    ];
 
-    fragments.forEach(frag => {
-      frag.addEventListener('click', () => {
-        frag.classList.add('hidden');
-        collected++;
-        applyStage(collected);
+    let currentTextIndex = 0;
+
+    function startJourney() {
+      document.querySelector('.initial-state').style.display = 'none';
+      const journeyContent = document.getElementById('journey-content');
+      journeyContent.classList.remove('hidden');
+      
+      setTimeout(() => {
+        const stage1 = document.querySelector('.journey-stage-1');
+        stage1.style.opacity = '1';
+        initDragAndDrop();
+        initNotepad();
+        showNextText();
+      }, 100);
+    }
+
+    function skipToNest() {
+      document.querySelector('.initial-state').style.display = 'none';
+      const nestGenerator = document.getElementById('nest-generator');
+      nestGenerator.classList.remove('hidden');
+      // 直接激活所有功能
+      activateAllFeatures();
+    }
+
+    function initDragAndDrop() {
+      const dropZone = document.getElementById('dropZone');
+      
+      // 防止默认拖放行为
+      document.addEventListener('dragover', (e) => e.preventDefault());
+      document.addEventListener('drop', (e) => e.preventDefault());
+
+      // 添加拖放区域的事件监听
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.backgroundColor = '#f0f0f0';
       });
-    });
 
-    function applyStage(stage) {
-      switch(stage) {
-        case 1:
-          document.body.style.backgroundColor = '#e0f7fa';
-          break;
-        case 2:
-          const audio = new Audio('ambient_sound.mp3');
-          audio.loop = true;
-          audio.play();
-          break;
-        case 3:
-          const nav = document.createElement('nav');
-          nav.innerHTML = '<a href="#">About</a> | <a href="#">Fragments</a> | <a href="#">Build</a>';
-          nav.style.position = 'fixed';
-          nav.style.bottom = '10px';
-          nav.style.left = '50%';
-          nav.style.transform = 'translateX(-50%)';
-          nav.style.background = '#fff';
-          nav.style.padding = '8px 16px';
-          nav.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-          document.body.appendChild(nav);
-          break;
-        case 4:
-          const input = document.createElement('textarea');
-          input.placeholder = 'Write your fragment here...';
-          input.style.position = 'fixed';
-          input.style.bottom = '60px';
-          input.style.left = '50%';
-          input.style.transform = 'translateX(-50%)';
-          input.style.width = '60%';
-          input.style.height = '60px';
-          document.body.appendChild(input);
-          break;
-        case 5:
-          window.location.href = 'tailmap.html';
-          break;
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.style.backgroundColor = '#ffffff';
+      });
+
+      dropZone.addEventListener('drop', handleDrop);
+    }
+
+    function showNextText() {
+      if (currentTextIndex >= textSequence.length) {
+        startStage2();
+        return;
       }
+
+      const fragment = document.createElement('div');
+      fragment.className = 'text-fragment';
+      fragment.textContent = textSequence[currentTextIndex];
+      fragment.draggable = true;
+      
+      // 随机位置
+      const randomPosition = getRandomPosition();
+      fragment.style.left = randomPosition.x + 'px';
+      fragment.style.top = randomPosition.y + 'px';
+
+      document.querySelector('.journey-stage-1').appendChild(fragment);
+
+      // 添加拖拽事件
+      fragment.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', fragment.textContent);
+        e.target.style.opacity = '0.5';
+      });
+
+      fragment.addEventListener('dragend', (e) => {
+        e.target.style.opacity = '1';
+      });
+
+      setTimeout(() => fragment.classList.add('visible'), 100);
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const dropZone = document.getElementById('dropZone');
+      dropZone.style.backgroundColor = '#ffffff';
+
+      // 获取拖动的文本
+      const text = e.dataTransfer.getData('text/plain');
+      
+      // 获取当前光标位置或末尾
+      const selection = window.getSelection();
+      let range;
+      
+      if (selection.rangeCount > 0) {
+        range = selection.getRangeAt(0);
+      } else {
+        range = document.createRange();
+        range.selectNodeContents(dropZone);
+        range.collapse(false);
+      }
+
+      // 在光标位置插入文本
+      const textNode = document.createTextNode(
+        (dropZone.textContent ? '\n\n' : '') + text
+      );
+      range.insertNode(textNode);
+
+      // 移动光标到插入文本的末尾
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // 移除原始拖动的文本
+      const draggedText = document.querySelector('.text-fragment');
+      draggedText.remove();
+
+      // 显示下一段文本
+      currentTextIndex++;
+      showNextText();
+
+      // 保持焦点
+      dropZone.focus();
+    }
+
+    function adjustCollectedTexts() {
+      const collectedTexts = document.querySelectorAll('.collected-text');
+      const totalTexts = collectedTexts.length;
+      
+      // 根据文本数量调整字体大小
+      collectedTexts.forEach((text, index) => {
+        // 第一段文本最大，之后逐渐减小
+        const fontSize = Math.max(12 - (index * 0.5), 10);
+        text.style.fontSize = `${fontSize}px`;
+        
+        // 添加渐变的透明度
+        text.style.opacity = 1 - (index * 0.1);
+      });
+    }
+
+    function getRandomPosition() {
+      const padding = 50;
+      const maxWidth = window.innerWidth - 400;
+      const maxHeight = window.innerHeight - 100;
+      
+      // 避免生成在中央区域
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      let x, y;
+      
+      do {
+        x = padding + Math.random() * (maxWidth - padding * 2);
+      } while (Math.abs(x - centerX) < 300);
+      
+      do {
+        y = padding + Math.random() * (maxHeight - padding * 2);
+      } while (Math.abs(y - centerY) < 200);
+
+      return { x, y };
+    }
+
+    function startStage2() {
+      document.body.classList.add('stage-1');
+      // 这里后续添加第二阶段内容
+    }
+
+    function activateAllFeatures() {
+      // 激活所有高级功能
+      document.body.classList.add('stage-1', 'stage-2', 'stage-3');
+      // 初始化生成器工具
+      initNestGenerator();
+      initDragAndDrop();
+    }
+
+    function initNestGenerator() {
+      // 这里将实现最终的生成器工具功能
+    }
+
+    // 添加记事本初始化函数
+    function initNotepad() {
+      const dropZone = document.getElementById('dropZone');
+      
+      // 自动聚焦
+      dropZone.focus();
+
+      // 添加快捷键支持
+      dropZone.addEventListener('keydown', (e) => {
+        // Tab键支持
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const selection = window.getSelection();
+          const range = selection.getRangeAt(0);
+          const tabNode = document.createTextNode('    '); // 4个空格
+          range.insertNode(tabNode);
+          range.setStartAfter(tabNode);
+          range.setEndAfter(tabNode);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      });
     }
   </script>
 </body>
