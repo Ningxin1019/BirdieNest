@@ -5,6 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nest Displacement</title>
   <script src="seam.js" defer></script>
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+    import {
+      getDatabase,
+      ref,
+      onValue,
+      update,
+      set
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBzbTuyiCXml_9lqF2XJS7fF0tluvizV7g",
+      authDomain: "nestdisplacement.firebaseapp.com",
+      databaseURL: "https://nestdisplacement-default-rtdb.firebaseio.com",
+      projectId: "nestdisplacement",
+      storageBucket: "nestdisplacement.firebasestorage.app",
+      messagingSenderId: "707900225193",
+      appId: "1:707900225193:web:dca902938e4b41aed95bb8",
+      measurementId: "G-M818THVNFF"
+    };
+
+    // 在 Firebase 初始化脚本中添加数据库连接测试
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const database = getDatabase(app);
+        
+        // 测试数据库连接和权限
+        const testRef = ref(database, 'grid/test');
+        try {
+          await set(testRef, {
+            timestamp: Date.now()
+          });
+          console.log('Firebase database connection and permissions verified');
+          await set(testRef, null); // 清理测试数据
+        } catch (error) {
+          console.error('Firebase database permission error:', error);
+          alert('Firebase database permission error. Please check database rules.');
+          return;
+        }
+        
+        // 保存 Firebase 实例到全局变量
+        window.firebaseApp = app;
+        window.firebaseAnalytics = analytics;
+        window.firebaseDb = database;
+        window.firebaseRef = ref(database, 'grid');
+        window.firebaseUpdate = update;
+        window.firebaseSet = set;
+        window.onValue = onValue;  // 添加这一行，保存 onValue 函数到全局
+        
+        // 初始化网格
+        window.grid = new CharacterGrid();
+      } catch (error) {
+        console.error('Error initializing Firebase:', error);
+        alert('Failed to initialize Firebase. Please check console for details.');
+      }
+    });
+  </script>
   <style>
     body {
       margin: 0;
@@ -2070,16 +2133,145 @@
         
         this.cells = new Map();
         this.activeCellPos = null;
-        this.cellSize = 8;  // 从 16 改为 8
-        
-        // ASCII字符渐变，从暗到亮
-        this.asciiRamp = ' .:-=+*#%@';
+        this.cellSize = 8;
         
         this.setupEventListeners();
         this.createInitialGrid();
         
-        // 添加随机字符集
-        this.randomChars = '@#$%&*+=-_?/\\|{}[]()'.split('');
+        // 初始化 Firebase 监听
+        if (window.firebaseRef) {
+          this.initializeFirebase();
+        } else {
+          console.warn('Waiting for Firebase to initialize...');
+          const checkInterval = setInterval(() => {
+            if (window.firebaseRef) {
+              console.log('Firebase now available, initializing...');
+              this.initializeFirebase();
+              clearInterval(checkInterval);
+            }
+          }, 100);
+          
+          // 设置超时，避免无限等待
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            console.error('Firebase initialization timeout');
+          }, 5000);
+        }
+      }
+
+      initializeFirebase() {
+        try {
+          console.log('Setting up Firebase listeners...');
+          if (!window.firebaseRef) {
+            console.error('Firebase reference not available');
+            return;
+          }
+
+          // 使用 window.onValue 而不是直接使用 onValue
+          window.onValue(window.firebaseRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              Object.entries(data).forEach(([key, value]) => {
+                if (value === null) return; // 跳过已删除的节点
+                
+                const [x, y] = key.split(',').map(Number);
+                const cell = this.getCell(x, y);
+                
+                if (value.char) cell.textContent = value.char;
+                if (value.backgroundColor) cell.style.backgroundColor = value.backgroundColor;
+              });
+            }
+          }, (error) => {
+            if (error.code === 'PERMISSION_DENIED') {
+              console.error('Firebase permission denied. Please check database rules.');
+              alert('Permission denied. Please check Firebase database rules.');
+            } else {
+              console.error('Firebase onValue error:', error);
+            }
+          });
+        } catch (error) {
+          console.error('Error in initializeFirebase:', error);
+        }
+      }
+
+      async updateCell(x, y, char, backgroundColor, shouldSync = true) {
+        try {
+          const cell = this.getCell(x, y);
+          
+          // 更新本地显示
+          if (char !== null) cell.textContent = char;
+          if (backgroundColor !== null) cell.style.backgroundColor = backgroundColor;
+          
+          // 同步到 Firebase
+          if (shouldSync && window.firebaseRef && window.firebaseUpdate) {
+            const key = `${x},${y}`;
+            const updates = {};
+            
+            // 只保存非空值
+            if (char !== null || backgroundColor !== null) {
+              updates[key] = {
+                char: char || cell.textContent,
+                backgroundColor: backgroundColor || cell.style.backgroundColor || 'transparent'
+              };
+              
+              // 如果数据为空，则删除该节点
+              if (!updates[key].char && (!updates[key].backgroundColor || updates[key].backgroundColor === 'transparent')) {
+                updates[key] = null;
+              }
+              
+              try {
+                await window.firebaseUpdate(window.firebaseRef, updates);
+                console.log('Cell updated successfully:', key);
+              } catch (error) {
+                if (error.code === 'PERMISSION_DENIED') {
+                  console.error('Firebase permission denied. Please check database rules.');
+                  alert('Permission denied. Please check Firebase database rules.');
+                } else {
+                  console.error('Failed to update Firebase:', error);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error in updateCell:', error);
+        }
+      }
+
+      // 修改 setCharacter 方法
+      setCharacter(x, y, char) {
+        this.updateCell(x, y, char, null, true);
+      }
+
+      // 修改 setCellBackground 方法
+      setCellBackground(x, y, color) {
+        this.updateCell(x, y, null, color, true);
+      }
+
+      // 新增 updateCell 方法
+      updateCell(x, y, char, backgroundColor, shouldSync = true) {
+        const cell = this.getCell(x, y);
+        const key = `${x},${y}`;
+        
+        // 更新本地显示
+        if (char !== null) cell.textContent = char;
+        if (backgroundColor !== null) cell.style.backgroundColor = backgroundColor;
+        
+        // 同步到 Firebase
+        if (shouldSync && window.firebaseRef && window.firebaseUpdate) {
+          const updates = {};
+          updates[key] = {
+            char: char !== null ? char : cell.textContent,
+            backgroundColor: backgroundColor !== null ? backgroundColor : cell.style.backgroundColor || 'transparent'
+          };
+          window.firebaseUpdate(window.firebaseRef, updates).catch(error => {
+            console.error('Failed to update Firebase:', error);
+          });
+        }
+      }
+
+      // 修改 clearCellBackground 方法
+      clearCellBackground(x, y) {
+        this.updateCell(x, y, null, 'transparent', true);
       }
 
       createInitialGrid() {
@@ -2258,11 +2450,6 @@
         return { x, y };
       }
 
-      setCharacter(x, y, char) {
-        const cell = this.getCell(x, y);
-        cell.textContent = char;
-      }
-
       moveCursor(dx, dy) {
         if (!this.activeCellPos) return;
         
@@ -2286,18 +2473,6 @@
         }
         cell.textContent = char;
         cell.style.color = color;
-      }
-
-      // 添加设置背景色的方法
-      setCellBackground(x, y, color) {
-        const cell = this.getCell(x, y);
-        cell.style.backgroundColor = color;
-      }
-
-      // 清除背景色的方法
-      clearCellBackground(x, y) {
-        const cell = this.getCell(x, y);
-        cell.style.backgroundColor = 'transparent';
       }
     }
 
@@ -2721,4 +2896,5 @@
     });
   </script>
 </body>
+
 </html>
