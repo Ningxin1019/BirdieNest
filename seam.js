@@ -126,13 +126,19 @@ class SeamCarver {
 
     // 主函数：缩小图片
     resize(targetWidth) {
+        if (targetWidth >= this.width) {
+            // 如果目标宽度大于等于当前宽度，直接返回原始图像数据
+            return new ImageData(this.pixels, this.width, this.height);
+        }
+
         const seamCount = this.width - targetWidth;
-        if (seamCount <= 0) return;
+        console.log(`Removing ${seamCount} seams...`);
 
         for (let i = 0; i < seamCount; i++) {
             const energyMap = this.calculateEnergyMap();
             const seam = this.findVerticalSeam(energyMap);
             this.removeVerticalSeam(seam);
+            console.log(`Removed seam ${i + 1}/${seamCount}`);
         }
 
         return new ImageData(this.pixels, this.width, this.height);
