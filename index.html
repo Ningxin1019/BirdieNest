@@ -688,8 +688,8 @@
 
     .grid-cell {
       position: absolute;
-      width: 16px;
-      height: 16px;
+      width: 8px;  /* 从 16px 改为 8px */
+      height: 8px; /* 从 16px 改为 8px */
       display: flex;
       align-items: center;
       justify-content: center;
@@ -700,6 +700,8 @@
       color: #000;
       text-shadow: 0 0 1px rgba(0,0,0,0.3);
       transition: all 0.2s ease;
+      font-size: 8px;  /* 添加字体大小设置 */
+      line-height: 1;  /* 确保文字垂直居中 */
     }
 
     .grid-cell.active {
@@ -2068,7 +2070,7 @@
         
         this.cells = new Map();
         this.activeCellPos = null;
-        this.cellSize = 16;
+        this.cellSize = 8;  // 从 16 改为 8
         
         // ASCII字符渐变，从暗到亮
         this.asciiRamp = ' .:-=+*#%@';
@@ -2484,22 +2486,36 @@
       
       const applyImageToGrid = () => {
         const rect = furnace.getBoundingClientRect();
-        const img = furnace.querySelector('img');
+        const furnaceContent = furnace.querySelector('.alchemy-content');
+        const contentRect = furnaceContent.getBoundingClientRect();
         
-        // 创建 canvas 获取像素数据
+        // 确保 SeamCarver 已初始化并处理了当前尺寸
+        if (!state.seamCarver) {
+          initSeamCarver();
+        }
+        
+        // 使用 SeamCarver 处理后的图像数据
+        const targetWidth = Math.floor(contentRect.width * state.seamCarver.scaleFactor);
+        const processedImageData = state.seamCarver.resize(targetWidth);
+        
+        // 创建临时 canvas 显示处理后的图像
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
+        canvas.width = contentRect.width;
+        canvas.height = contentRect.height;
         
-        // 使用实际图片尺寸
-        const imgRect = img.getBoundingClientRect();
-        canvas.width = imgRect.width;
-        canvas.height = imgRect.height;
+        // 创建临时 canvas 存放 SeamCarver 处理后的数据
+        const processedCanvas = document.createElement('canvas');
+        const processedCtx = processedCanvas.getContext('2d');
+        processedCanvas.width = processedImageData.width;
+        processedCanvas.height = processedImageData.height;
+        processedCtx.putImageData(processedImageData, 0, 0);
         
-        // 绘制当前显示的图片（包括 Content-Aware Scale 效果）
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // 将处理后的图像绘制到最终尺寸
+        ctx.drawImage(processedCanvas, 0, 0, contentRect.width, contentRect.height);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
-        // 计算网格起始位置，使用实际像素位置
+        // 计算网格起始位置
         const startGridX = Math.floor((rect.left + window.scrollX) / window.grid.cellSize);
         const startGridY = Math.floor((rect.top + window.scrollY) / window.grid.cellSize);
         
@@ -2507,15 +2523,15 @@
         const pixelsPerCell = window.grid.cellSize;
         
         // 遍历图片区域
-        for (let y = 0; y < imgRect.height; y += pixelsPerCell) {
-          for (let x = 0; x < imgRect.width; x += pixelsPerCell) {
+        for (let y = 0; y < contentRect.height; y += pixelsPerCell) {
+          for (let x = 0; x < contentRect.width; x += pixelsPerCell) {
             // 计算当前网格单元对应的像素区域的平均颜色
             let r = 0, g = 0, b = 0, a = 0;
             let count = 0;
             
             // 计算区域平均颜色
-            for (let py = y; py < Math.min(y + pixelsPerCell, imgRect.height); py++) {
-              for (let px = x; px < Math.min(x + pixelsPerCell, imgRect.width); px++) {
+            for (let py = y; py < Math.min(y + pixelsPerCell, contentRect.height); py++) {
+              for (let px = x; px < Math.min(x + pixelsPerCell, contentRect.width); px++) {
                 const i = (py * imageData.width + px) * 4;
                 r += imageData.data[i];
                 g += imageData.data[i + 1];
@@ -2544,13 +2560,13 @@
 
       const removeImageFromGrid = () => {
         const rect = furnace.getBoundingClientRect();
-        const img = furnace.querySelector('img');
-        const imgRect = img.getBoundingClientRect();
+        const furnaceContent = furnace.querySelector('.alchemy-content');
+        const contentRect = furnaceContent.getBoundingClientRect();
         
         const startGridX = Math.floor((rect.left + window.scrollX) / window.grid.cellSize);
         const startGridY = Math.floor((rect.top + window.scrollY) / window.grid.cellSize);
-        const gridWidth = Math.ceil(imgRect.width / window.grid.cellSize);
-        const gridHeight = Math.ceil(imgRect.height / window.grid.cellSize);
+        const gridWidth = Math.ceil(contentRect.width / window.grid.cellSize);
+        const gridHeight = Math.ceil(contentRect.height / window.grid.cellSize);
         
         // 清除对应区域的背景色
         for (let y = 0; y < gridHeight; y++) {
