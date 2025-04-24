@@ -23,6 +23,12 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .initial-state > * {
+      pointer-events: auto;
     }
 
     .hello {
@@ -30,6 +36,9 @@
       top: 20px;
       left: 20px;
       font-size: 14px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 5px;
+      border-radius: 3px;
     }
 
     .start-button {
@@ -142,12 +151,17 @@
       display: flex;
       flex-direction: column;
       font-family: 'MS Sans Serif', Arial, sans-serif;
-      transition: all 0.3s ease;
+      transition: none;
+      resize: both;
+      overflow: auto;
+      max-width: 90vw;
+      max-height: 80vh;
+      z-index: 2;
     }
 
-    .feather-outline.minimizing {
-      transform: translate(-50%, -50%) scale(0.1);
-      opacity: 0;
+    .feather-outline.dragging {
+      transition: none;
+      cursor: move;
     }
 
     /* 记事本标题栏 */
@@ -159,6 +173,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: move;
+      user-select: none;
     }
 
     .notepad-title-buttons {
@@ -215,6 +231,7 @@
       min-height: 250px;
       outline: none;
       caret-color: #000;
+      max-height: calc(80vh - 30px);
     }
 
     .notepad-content::selection {
@@ -577,13 +594,107 @@
       pointer-events: none;
       white-space: nowrap;
       z-index: 1000;
-      transition: opacity 0.5s ease, visibility 0.5s ease;
+      transition: opacity 0.5s ease, visibility 0.5s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .alchemy-emoji:hover {
+      transform: translate(50%, -50%) rotate(-15deg) scale(1.2);
+      animation: wiggle 0.5s infinite alternate;
     }
 
     .alchemy-text.show,
     .alchemy-emoji.show {
       opacity: 1;
       visibility: visible;
+    }
+
+    /* 添加 Alchemy Setup 子菜单样式 */
+    .alchemy-submenu {
+      position: fixed;
+      top: 0;
+      right: 0;
+      background: white;
+      padding: 20px;
+      font-family: monospace;
+      font-size: 14px;
+      display: none;
+      z-index: 1998;
+    }
+
+    .mode-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      color: #000;
+      cursor: pointer;
+    }
+
+    .mode-option .checkbox {
+      font-family: monospace;
+      user-select: none;
+    }
+
+    .mode-option.checked .checkbox {
+      content: '[*]';
+    }
+
+    /* 添加 placeholder 样式 */
+    .notepad-content[data-placeholder]:empty:before {
+      content: attr(data-placeholder);
+      color: #999;
+      font-style: italic;
+    }
+
+    /* 修改图片样式 */
+    .notepad-content img {
+      max-width: 100%;
+      max-height: calc(80vh - 100px);
+      height: auto;
+      width: auto;
+      display: block;
+      margin: 10px auto;
+      object-fit: contain;
+    }
+
+    /* 修改字符网格样式，确保不会干扰其他元素的点击 */
+    .character-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: monospace;
+      font-size: 16px;
+      line-height: 1;
+      white-space: pre;
+      cursor: text;
+      z-index: 0;
+      background: #f5f5f5;
+      pointer-events: none;
+    }
+
+    .grid-cell {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      border: 1px solid rgba(0,0,0,0.1);
+      box-sizing: border-box;
+      pointer-events: auto;
+    }
+
+    /* 确保礼物图标和其他UI元素在网格之上 */
+    .unlock-emoji {
+      z-index: 1000;
+    }
+
+    .unlock-text {
+      z-index: 1000;
     }
   </style>
 </head>
@@ -628,6 +739,14 @@
           <span class="checkbox">[ ]</span>
           <span class="effect-name">COLOR</span>
         </div>
+        <div class="effect-item">
+          <span class="checkbox">[ ]</span>
+          <span class="effect-name">SLICE TOOL</span>
+        </div>
+        <div class="effect-item">
+          <span class="checkbox">[ ]</span>
+          <span class="effect-name">ALCHEMY SETUP</span>
+        </div>
       </div>
     </div>
   </div>
@@ -645,6 +764,22 @@
     <div class="slider-group">
       <div class="slider-label">SATURATION</div>
       <input type="range" class="color-slider" id="saturationSlider" min="0" max="100" value="50">
+    </div>
+  </div>
+
+  <!-- 添加 Alchemy Setup 子菜单 -->
+  <div class="alchemy-submenu">
+    <div class="mode-option checked" data-mode="bird">
+      <span class="checkbox">[*]</span>
+      <span class="mode-name">Bird Mode</span>
+    </div>
+    <div class="mode-option" data-mode="free">
+      <span class="checkbox">[ ]</span>
+      <span class="mode-name">Free Mode</span>
+    </div>
+    <div class="mode-option" data-mode="hack">
+      <span class="checkbox">[ ]</span>
+      <span class="mode-name">Hack Mode</span>
     </div>
   </div>
 
@@ -700,6 +835,12 @@
       'Monk_parakeet'
     ];
 
+    // 添加模式管理变量
+    let currentMode = 'bird';
+    let pendingMode = 'bird';
+    let lastWord = '';
+    let searchTimeout = null;
+
     function startJourney() {
       document.querySelector('.initial-state').style.display = 'none';
       const journeyContent = document.getElementById('journey-content');
@@ -708,7 +849,7 @@
       // 显示星号按钮，确保是黑色
       const starButton = document.querySelector('.star-button');
       starButton.style.display = 'block';
-      starButton.style.color = '#000'; // 确保显示时就是黑色
+      starButton.style.color = '#000';
       
       setTimeout(() => {
         const stage1 = document.querySelector('.journey-stage-1');
@@ -916,6 +1057,41 @@
           selection.removeAllRanges();
           selection.addRange(range);
         }
+        
+        // 在 Free Mode 下处理回车键
+        if (currentMode === 'free' && e.key === 'Enter') {
+          e.preventDefault(); // 阻止默认的换行行为
+          
+          // 获取当前输入的文本
+          const text = dropZone.textContent.trim();
+          console.log('Enter pressed, text:', text); // 添加日志
+          
+          // 如果文本不为空，执行搜索
+          if (text) {
+            // 获取最后一个单词
+            const words = text.split(/\s+/);
+            lastWord = words[words.length - 1].toLowerCase();
+            console.log('Searching for word:', lastWord); // 添加日志
+            
+            // 执行搜索
+            loadBirdImage();
+          }
+        }
+      });
+
+      // 处理输入事件
+      dropZone.addEventListener('input', (e) => {
+        if (currentMode === 'free') {
+          // 获取当前输入的文本
+          const text = dropZone.textContent.trim();
+          
+          // 如果文本为空，显示 placeholder
+          if (!text) {
+            dropZone.setAttribute('data-placeholder', 'Type any English word to search for related images');
+          } else {
+            dropZone.removeAttribute('data-placeholder');
+          }
+        }
       });
     }
 
@@ -982,6 +1158,10 @@
       const checkbox = colorEffect.querySelector('.checkbox');
       checkbox.disabled = false;
       
+      // 激活最小化按钮
+      const minimizeButton = document.querySelector('.title-button.minimize');
+      minimizeButton.classList.add('active');
+      
       // 移除点击事件，防止重复触发
       emoji.removeEventListener('click', unlockColors);
     }
@@ -1007,20 +1187,76 @@
     function initializeColorControl() {
       const colorEffect = document.querySelector('.effect-item');
       const colorSubmenu = document.querySelector('.color-submenu');
+      const alchemyEffect = document.querySelector('.effect-item:nth-child(3)');
+      const alchemySubmenu = document.querySelector('.alchemy-submenu');
+      const modeOptions = document.querySelectorAll('.mode-option');
       const hueSlider = document.getElementById('hueSlider');
       const brightnessSlider = document.getElementById('brightnessSlider');
       const saturationSlider = document.getElementById('saturationSlider');
-      let isChecked = false;
+      let isColorChecked = false;
+      let isAlchemyChecked = false;
+
+      // 初始化模式选项的点击事件
+      modeOptions.forEach(option => {
+        option.addEventListener('click', () => {
+          const mode = option.dataset.mode;
+          if (mode === currentMode) return; // 如果点击当前模式，不做任何事
+
+          // 更新复选框状态
+          modeOptions.forEach(opt => {
+            const checkbox = opt.querySelector('.checkbox');
+            if (opt.dataset.mode === mode) {
+              checkbox.textContent = '[*]';
+              opt.classList.add('checked');
+            } else {
+              checkbox.textContent = '[ ]';
+              opt.classList.remove('checked');
+            }
+          });
+
+          // 设置待切换的模式
+          pendingMode = mode;
+        });
+      });
 
       // 点击 COLOR 选项的处理
       colorEffect.addEventListener('click', (e) => {
         if (!colorEffect.classList.contains('unlocked')) return;
 
-        isChecked = !isChecked;
+        isColorChecked = !isColorChecked;
         const checkbox = colorEffect.querySelector('.checkbox');
-        checkbox.textContent = isChecked ? '[*]' : '[ ]';
+        checkbox.textContent = isColorChecked ? '[*]' : '[ ]';
         colorEffect.classList.toggle('checked');
-        colorSubmenu.style.display = isChecked ? 'block' : 'none';
+        colorSubmenu.style.display = isColorChecked ? 'block' : 'none';
+        
+        // 如果 Alchemy 菜单打开，则关闭它
+        if (isColorChecked && isAlchemyChecked) {
+          isAlchemyChecked = false;
+          const alchemyCheckbox = alchemyEffect.querySelector('.checkbox');
+          alchemyCheckbox.textContent = '[ ]';
+          alchemyEffect.classList.remove('checked');
+          alchemySubmenu.style.display = 'none';
+        }
+      });
+
+      // 点击 ALCHEMY SETUP 选项的处理
+      alchemyEffect.addEventListener('click', (e) => {
+        if (!alchemyEffect.classList.contains('unlocked')) return;
+
+        isAlchemyChecked = !isAlchemyChecked;
+        const checkbox = alchemyEffect.querySelector('.checkbox');
+        checkbox.textContent = isAlchemyChecked ? '[*]' : '[ ]';
+        alchemyEffect.classList.toggle('checked');
+        alchemySubmenu.style.display = isAlchemyChecked ? 'block' : 'none';
+        
+        // 如果 Color 菜单打开，则关闭它
+        if (isAlchemyChecked && isColorChecked) {
+          isColorChecked = false;
+          const colorCheckbox = colorEffect.querySelector('.checkbox');
+          colorCheckbox.textContent = '[ ]';
+          colorEffect.classList.remove('checked');
+          colorSubmenu.style.display = 'none';
+        }
       });
 
       // 滑块控制颜色
@@ -1165,6 +1401,10 @@
           }, 50);
           
           alchemyShown = true;
+
+          // 添加点击事件来解锁 ALCHEMY SETUP 选项
+          alchemyEmoji.style.pointerEvents = 'auto'; // 确保可以点击
+          alchemyEmoji.addEventListener('click', unlockAlchemySetup);
         }
       }
 
@@ -1183,6 +1423,35 @@
         }
       }
 
+      // 修改解锁 ALCHEMY SETUP 的函数
+      function unlockAlchemySetup() {
+        console.log('Unlocking Alchemy Setup...'); // 添加调试日志
+        
+        // 获取所有 effect-item 元素
+        const effectItems = document.querySelectorAll('.effect-item');
+        // ALCHEMY SETUP 是第三个选项
+        const alchemyEffect = effectItems[2];
+        
+        if (alchemyEffect) {
+          console.log('Found Alchemy Setup option'); // 添加调试日志
+          
+          // 解锁选项
+          alchemyEffect.classList.add('unlocked');
+          const checkbox = alchemyEffect.querySelector('.checkbox');
+          if (checkbox) {
+            checkbox.disabled = false;
+          }
+          
+          // 隐藏解锁提示
+          hideAlchemyUnlock();
+          
+          // 移除点击事件，防止重复触发
+          alchemyEmoji.removeEventListener('click', unlockAlchemySetup);
+        } else {
+          console.log('Alchemy Setup option not found'); // 添加调试日志
+        }
+      }
+
       // 检查交互次数
       function checkInteractions() {
         // 只在最小化时增加计数
@@ -1193,10 +1462,8 @@
           if (interactionCount === 3 && !alchemyUnlocked) {
             alchemyUnlocked = true;
             showAlchemyUnlock();
-          } else if (interactionCount > 3 && alchemyUnlocked) {
-            // 在第四次交互时隐藏提示
-            hideAlchemyUnlock();
           }
+          // 移除在第四次交互时自动隐藏提示的逻辑
         }
       }
 
@@ -1209,44 +1476,178 @@
         checkInteractions();
       }
 
-      // 加载并显示鸟类图片
+      // 修改加载图片的函数
       async function loadBirdImage() {
-        // 显示加载提示
-        dropZone.innerHTML = 'Loading bird image...';
-        dropZone.style.padding = '10px';
+        console.log('Loading image in mode:', currentMode);
         
         try {
-          const imageUrl = await getRandomBirdImage();
-          console.log('Image URL:', imageUrl); // 调试日志
-          
-          if (imageUrl) {
-            dropZone.style.padding = '0';
-            dropZone.innerHTML = '';
-            
-            const img = document.createElement('img');
-            img.src = imageUrl;
-            img.style.cssText = `
-              max-width: 100%;
-              height: auto;
-              display: block;
-              margin: 0 auto;
-              object-fit: contain;
-            `;
-            dropZone.appendChild(img);
-            
-            // 只在第一次显示重复提示
-            if (isFirstRestore) {
-              showRepeatText();
-              isFirstRestore = false;
-            }
-          } else {
-            dropZone.innerHTML = 'Failed to load bird image';
+          if (currentMode === 'bird') {
+            // Bird Mode 的逻辑保持不变
+            dropZone.innerHTML = 'Loading image...';
             dropZone.style.padding = '10px';
+            const imageUrl = await getRandomBirdImage();
+            
+            if (imageUrl) {
+              dropZone.style.padding = '0';
+              dropZone.innerHTML = '';
+              
+              const img = document.createElement('img');
+              img.src = imageUrl;
+              img.style.cssText = `
+                max-width: 100%;
+                height: auto;
+                display: block;
+                margin: 0 auto;
+                object-fit: contain;
+              `;
+              dropZone.appendChild(img);
+              
+              if (isFirstRestore) {
+                showRepeatText();
+                isFirstRestore = false;
+              }
+            }
+          } else if (currentMode === 'free') {
+            // Free Mode 改为图片上传功能
+            if (dropZone.querySelector('.upload-container') === null) {
+              // 清空内容
+              dropZone.innerHTML = '';
+              dropZone.style.padding = '20px';
+              
+              // 创建上传容器
+              const uploadContainer = document.createElement('div');
+              uploadContainer.className = 'upload-container';
+              uploadContainer.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+                width: 100%;
+                height: 100%;
+                min-height: 200px;
+                border: 2px dashed #999;
+                border-radius: 5px;
+                padding: 20px;
+                box-sizing: border-box;
+              `;
+              
+              // 添加提示文本
+              const uploadText = document.createElement('div');
+              uploadText.textContent = 'Drop image here or click to upload';
+              uploadText.style.cssText = `
+                font-size: 16px;
+                color: #666;
+                text-align: center;
+              `;
+              
+              // 添加文件输入框
+              const fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.accept = 'image/*';
+              fileInput.style.display = 'none';
+              
+              // 添加上传按钮
+              const uploadButton = document.createElement('button');
+              uploadButton.textContent = 'Choose File';
+              uploadButton.style.cssText = `
+                padding: 8px 16px;
+                background: none;
+                border: 1px solid #666;
+                border-radius: 4px;
+                cursor: pointer;
+                font-family: monospace;
+                transition: all 0.3s ease;
+              `;
+              
+              uploadButton.addEventListener('mouseover', () => {
+                uploadButton.style.background = '#000';
+                uploadButton.style.color = '#fff';
+              });
+              
+              uploadButton.addEventListener('mouseout', () => {
+                uploadButton.style.background = 'none';
+                uploadButton.style.color = '#000';
+              });
+              
+              // 处理文件选择
+              fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.style.cssText = `
+                      max-width: 100%;
+                      height: auto;
+                      display: block;
+                      margin: 20px auto;
+                      object-fit: contain;
+                    `;
+                    dropZone.innerHTML = '';
+                    dropZone.style.padding = '0';
+                    dropZone.appendChild(img);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              });
+              
+              // 处理拖放
+              uploadContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadContainer.style.borderColor = '#000';
+                uploadContainer.style.background = 'rgba(0,0,0,0.05)';
+              });
+              
+              uploadContainer.addEventListener('dragleave', () => {
+                uploadContainer.style.borderColor = '#999';
+                uploadContainer.style.background = 'none';
+              });
+              
+              uploadContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadContainer.style.borderColor = '#999';
+                uploadContainer.style.background = 'none';
+                
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.style.cssText = `
+                      max-width: 100%;
+                      height: auto;
+                      display: block;
+                      margin: 20px auto;
+                      object-fit: contain;
+                    `;
+                    dropZone.innerHTML = '';
+                    dropZone.style.padding = '0';
+                    dropZone.appendChild(img);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              });
+              
+              // 点击按钮触发文件选择
+              uploadButton.addEventListener('click', () => {
+                fileInput.click();
+              });
+              
+              // 组装上传界面
+              uploadContainer.appendChild(uploadText);
+              uploadContainer.appendChild(uploadButton);
+              uploadContainer.appendChild(fileInput);
+              dropZone.appendChild(uploadContainer);
+            }
           }
         } catch (error) {
-          console.error('Error displaying image:', error);
-          dropZone.innerHTML = 'Failed to load bird image';
-          dropZone.style.padding = '10px';
+          console.error('Error displaying content:', error);
+          if (currentMode === 'bird') {
+            dropZone.innerHTML = 'Failed to load image';
+            dropZone.style.padding = '10px';
+          }
         }
       }
 
@@ -1254,7 +1655,14 @@
       async function restoreNotepad() {
         minimizedIcon.style.display = 'none';
         notepad.style.display = 'flex';
-        // 每次打开都加载新图片
+        
+        // 应用待切换的模式
+        if (pendingMode !== currentMode) {
+          currentMode = pendingMode;
+          console.log('Mode switched to:', currentMode);
+        }
+        
+        // 根据当前模式加载内容
         await loadBirdImage();
       }
 
@@ -1302,20 +1710,323 @@
       document.addEventListener('mouseup', dragEnd);
       minimizeButton.addEventListener('click', minimizeNotepad);
       minimizedIcon.addEventListener('dblclick', restoreNotepad);
-
-      // 修改 unlockColors 函数，添加激活最小化按钮的调用
-      const originalUnlockColors = unlockColors;
-      unlockColors = function() {
-        originalUnlockColors();
-        activateMinimizeButton();
-      };
     }
+
+    // 修改获取维基百科图片的函数
+    async function getWikiImage(searchTerm) {
+      console.log('Searching for:', searchTerm);
+      try {
+        const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm)}`;
+        console.log('API URL:', url);
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('No entry found');
+        }
+        
+        const data = await response.json();
+        console.log('API response:', data);
+        
+        if (!data.thumbnail || !data.thumbnail.source) {
+          throw new Error('No image found');
+        }
+        
+        // 返回图片 URL 和描述文本
+        return {
+          imageUrl: data.thumbnail.source,
+          title: data.title,
+          extract: data.extract
+        };
+      } catch (error) {
+        console.error('Error fetching wiki image:', error);
+        return null;
+      }
+    }
+
+    // 修改记事本拖拽功能的脚本
+    function initNotepadDrag() {
+      const notepad = document.querySelector('.feather-outline');
+      const titleBar = document.querySelector('.notepad-title');
+      let isDragging = false;
+      let startX;
+      let startY;
+      let notepadX;
+      let notepadY;
+
+      function dragStart(e) {
+        if (e.target.closest('.notepad-title-buttons')) return;
+        
+        // 获取记事本当前位置
+        const rect = notepad.getBoundingClientRect();
+        notepadX = rect.left;
+        notepadY = rect.top;
+        
+        // 获取鼠标起始位置
+        startX = e.clientX;
+        startY = e.clientY;
+
+        if (e.target.closest('.notepad-title')) {
+          isDragging = true;
+          notepad.classList.add('dragging');
+          
+          // 移除transform，改用top和left定位
+          notepad.style.transform = 'none';
+          notepad.style.left = notepadX + 'px';
+          notepad.style.top = notepadY + 'px';
+        }
+      }
+
+      function dragEnd() {
+        isDragging = false;
+        notepad.classList.remove('dragging');
+      }
+
+      function drag(e) {
+        if (isDragging) {
+          e.preventDefault();
+          
+          // 计算移动距离
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          
+          // 更新记事本位置
+          let newX = notepadX + dx;
+          let newY = notepadY + dy;
+          
+          // 获取记事本和窗口尺寸
+          const rect = notepad.getBoundingClientRect();
+          const maxX = window.innerWidth - rect.width;
+          const maxY = window.innerHeight - rect.height;
+          
+          // 确保记事本不会完全移出视窗
+          newX = Math.max(-rect.width / 2, Math.min(newX, maxX + rect.width / 2));
+          newY = Math.max(-rect.height / 2, Math.min(newY, maxY + rect.height / 2));
+          
+          notepad.style.left = newX + 'px';
+          notepad.style.top = newY + 'px';
+        }
+      }
+
+      titleBar.addEventListener('mousedown', dragStart);
+      document.addEventListener('mousemove', drag);
+      document.addEventListener('mouseup', dragEnd);
+
+      // 处理窗口大小变化
+      window.addEventListener('resize', () => {
+        const rect = notepad.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width;
+        const maxY = window.innerHeight - rect.height;
+        
+        // 如果记事本超出视窗，调整位置
+        if (rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
+          let newX = parseFloat(notepad.style.left);
+          let newY = parseFloat(notepad.style.top);
+          
+          if (rect.right > window.innerWidth) {
+            newX = Math.max(0, maxX);
+          }
+          if (rect.bottom > window.innerHeight) {
+            newY = Math.max(0, maxY);
+          }
+          
+          notepad.style.left = newX + 'px';
+          notepad.style.top = newY + 'px';
+        }
+      });
+    }
+
+    // 修改图片加载函数
+    function handleImageLoad(img) {
+      const maxWidth = window.innerWidth * 0.8;  // 80% 的视窗宽度
+      const maxHeight = window.innerHeight * 0.7;  // 70% 的视窗高度
+
+      const ratio = Math.min(
+        maxWidth / img.naturalWidth,
+        maxHeight / img.naturalHeight,
+        1  // 不要放大图片
+      );
+
+      img.style.width = `${img.naturalWidth * ratio}px`;
+      img.style.height = `${img.naturalHeight * ratio}px`;
+    }
+
+    // 修改字符网格系统的脚本
+    class CharacterGrid {
+      constructor() {
+        this.container = document.createElement('div');
+        this.container.className = 'character-grid';
+        document.body.insertBefore(this.container, document.body.firstChild);
+        
+        this.cellSize = 16;
+        this.cells = new Map();
+        this.images = new Set();
+        this.activeCellPos = null;
+        
+        console.log('CharacterGrid initialized');
+        
+        this.setupEventListeners();
+        this.createInitialGrid();
+      }
+
+      createInitialGrid() {
+        const viewportWidth = Math.ceil(window.innerWidth / this.cellSize);
+        const viewportHeight = Math.ceil(window.innerHeight / this.cellSize);
+        
+        for (let y = 0; y < viewportHeight; y++) {
+          for (let x = 0; x < viewportWidth; x++) {
+            this.getCell(x, y);
+          }
+        }
+        
+        console.log(`Initial grid created: ${viewportWidth}x${viewportHeight} cells`);
+      }
+
+      createCell(x, y) {
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell';
+        cell.style.left = `${x * this.cellSize}px`;
+        cell.style.top = `${y * this.cellSize}px`;
+        // 添加边框以便于调试
+        cell.style.border = '1px solid rgba(0,0,0,0.1)';
+        this.container.appendChild(cell);
+        return cell;
+      }
+
+      getCell(x, y) {
+        const key = `${x},${y}`;
+        if (!this.cells.has(key)) {
+          this.cells.set(key, this.createCell(x, y));
+        }
+        return this.cells.get(key);
+      }
+
+      positionToGrid(clientX, clientY) {
+        const rect = this.container.getBoundingClientRect();
+        const x = Math.floor((clientX - rect.left) / this.cellSize);
+        const y = Math.floor((clientY - rect.top) / this.cellSize);
+        console.log(`Click position converted to grid: (${x}, ${y})`);
+        return { x, y };
+      }
+
+      setCharacter(x, y, char) {
+        const cell = this.getCell(x, y);
+        cell.textContent = char;
+        console.log(`Character set at (${x}, ${y}): "${char}"`);
+      }
+
+      setupEventListeners() {
+        // 点击定位，但要避免干扰其他元素的点击
+        this.container.addEventListener('click', (e) => {
+          // 检查是否点击了其他重要元素
+          const clickedElement = e.target;
+          const isOtherElement = clickedElement.closest('.unlock-emoji') ||
+                                clickedElement.closest('.feather-outline') ||
+                                clickedElement.closest('.effects-menu') ||
+                                clickedElement.closest('.color-submenu') ||
+                                clickedElement.closest('.alchemy-submenu') ||
+                                clickedElement.closest('.initial-state');
+          
+          if (isOtherElement) {
+            return;
+          }
+
+          if (e.target.classList.contains('grid-cell')) {
+            console.log('Grid cell clicked');
+            const { x, y } = this.positionToGrid(e.clientX, e.clientY);
+            
+            if (this.activeCellPos) {
+              this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
+            }
+            this.activeCellPos = { x, y };
+            this.getCell(x, y).classList.add('active');
+          }
+        });
+
+        // 键盘输入，只在网格激活且不在其他输入区域时响应
+        document.addEventListener('keypress', (e) => {
+          if (!this.activeCellPos || 
+              document.activeElement.tagName === 'INPUT' || 
+              document.activeElement.tagName === 'TEXTAREA' ||
+              e.target.closest('.feather-outline')) {
+            return;
+          }
+          
+          const char = String.fromCharCode(e.keyCode);
+          this.setCharacter(this.activeCellPos.x, this.activeCellPos.y, char);
+          
+          this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
+          this.activeCellPos.x += 1;
+          this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.add('active');
+        });
+
+        // 处理退格键
+        document.addEventListener('keydown', (e) => {
+          if (!this.activeCellPos || 
+              document.activeElement.tagName === 'INPUT' || 
+              document.activeElement.tagName === 'TEXTAREA' ||
+              e.target.closest('.feather-outline')) {
+            return;
+          }
+          
+          if (e.key === 'Backspace') {
+            e.preventDefault();
+            this.setCharacter(this.activeCellPos.x, this.activeCellPos.y, '');
+            
+            this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
+            this.activeCellPos.x = Math.max(0, this.activeCellPos.x - 1);
+            this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.add('active');
+          }
+        });
+      }
+    }
+
+    // 确保在页面加载完成后初始化字符网格
+    let grid;
+    window.addEventListener('load', () => {
+      console.log('Window loaded, initializing CharacterGrid');
+      grid = new CharacterGrid();
+    });
 
     // 在页面加载时初始化
     document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM loaded, initializing systems');
+      
+      // 初始化字符网格
+      grid = new CharacterGrid();
+      
+      // 初始化其他功能
       initializeMenu();
       initializeColorControl();
       initializeMinimize();
+      initNotepadDrag();
+    });
+
+    // 添加字符网格的键盘事件处理
+    document.addEventListener('keydown', (e) => {
+      // 如果焦点在记事本内，不处理网格输入
+      if (e.target.closest('.feather-outline')) return;
+      
+      // 处理方向键
+      if (grid && grid.activeCellPos) {
+        switch(e.key) {
+          case 'ArrowLeft':
+            e.preventDefault();
+            grid.moveCursor(-1, 0);
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            grid.moveCursor(1, 0);
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            grid.moveCursor(0, -1);
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            grid.moveCursor(0, 1);
+            break;
+        }
+      }
     });
   </script>
 </body>
