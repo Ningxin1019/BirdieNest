@@ -2471,23 +2471,19 @@
 
     // 在文档加载完成后初始化
     document.addEventListener('DOMContentLoaded', () => {
-      if (!alchemyInitialized) {
-        console.log('Initializing Alchemy Furnace functionality');
-        initAlchemyFurnace();
-        alchemyInitialized = true;
-      }
-    });
-
-    // 确保在页面加载时初始化网格系统
-    let grid;
-    document.addEventListener('DOMContentLoaded', () => {
       console.log('DOM loaded, initializing systems');
       grid = new CharacterGrid();
       initializeMenu();
       initializeColorControl();
       initializeMinimize();
       initNotepadDrag();
-      initAlchemyFurnace();
+      
+      // 只在未初始化时调用一次
+      if (!alchemyInitialized) {
+        console.log('Initializing Alchemy Furnace functionality');
+        initAlchemyFurnace();
+        alchemyInitialized = true;
+      }
     });
   </script>
 </body>
