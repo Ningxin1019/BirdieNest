@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nest Displacement</title>
-  <script src="seam.js"></script>
+  <script src="seam.js" defer></script>
   <style>
     body {
       margin: 0;
@@ -737,18 +737,33 @@
       display: none;
       flex-direction: column;
       font-family: 'MS Sans Serif', Arial, sans-serif;
-      resize: both;
       overflow: hidden;
       width: 400px;
       height: 300px;
-      min-width: 120px;  /* 降低最小宽度 */
-      min-height: 100px; /* 降低最小高度 */
+      min-width: 120px;
+      min-height: 100px;
       z-index: 1001;
+      position: relative; /* 确保相对定位 */
     }
 
-    .alchemy-furnace.dragging {
-      transition: none;
-      cursor: move;
+    /* 移除之前的 ::after 样式 */
+    .alchemy-furnace::after {
+      content: none;
+    }
+
+    /* 添加和 Portal 相同的调整大小指示器样式 */
+    .resize-handle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: transparent;
+      z-index: 1002;
+    }
+
+    .resize-handle.bottom-right {
+      right: 0;
+      bottom: 0;
+      cursor: se-resize;
     }
 
     .alchemy-title {
@@ -780,22 +795,6 @@
       object-fit: contain;
     }
 
-    /* 添加调整大小的手柄样式 */
-    .resize-handle {
-      position: absolute;
-      width: 10px;
-      height: 10px;
-      background: transparent;
-      cursor: nw-resize;
-      z-index: 1002;
-    }
-
-    .resize-handle.bottom-right {
-      right: 0;
-      bottom: 0;
-      cursor: se-resize;
-    }
-
     /* 修改 Portal 中图片的样式 */
     .notepad-content img {
       max-width: 100%;
@@ -806,6 +805,24 @@
 
     .notepad-content img:hover {
       transform: scale(1.02);
+    }
+
+    /* 添加 Content-Aware Scale 切换按钮样式 */
+    .scale-mode-toggle {
+      position: absolute;
+      right: 25px;
+      top: 3px;
+      font-size: 12px;
+      color: white;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+    }
+
+    .scale-mode-toggle .checkbox {
+      margin-right: 5px;
+      font-family: monospace;
     }
   </style>
 </head>
@@ -919,6 +936,10 @@
   <div class="alchemy-furnace">
     <div class="alchemy-title">
       <span>Alchemy Furnace</span>
+      <div class="scale-mode-toggle">
+        <span class="checkbox">[ ]</span>
+        <span>Content-Aware</span>
+      </div>
       <div class="notepad-title-buttons">
         <button class="title-button minimize">_</button>
         <button class="title-button maximize">□</button>
@@ -2148,22 +2169,15 @@
 
     // 添加 Alchemy Furnace 功能
     function createAlchemyFurnace(imgSrc) {
-      // 创建新的窗口实例
       const furnace = document.createElement('div');
       furnace.className = 'alchemy-furnace';
       furnace.style.display = 'flex';
-
+      
       // 计算新窗口的位置（错开放置）
       const existingFurnaces = document.querySelectorAll('.alchemy-furnace');
       const offset = existingFurnaces.length * 30;
-      
-      // 使用像素值而不是百分比，并确保窗口在可视范围内
-      const baseLeft = Math.min(window.innerWidth * 0.6, window.innerWidth - 500); // 基础左边距
-      const baseTop = Math.min(window.innerHeight * 0.2, window.innerHeight - 400); // 基础上边距
-      
-      // 计算实际位置，确保不会超出屏幕
-      const left = Math.min(baseLeft + offset, window.innerWidth - 400);
-      const top = Math.min(baseTop + offset, window.innerHeight - 300);
+      const left = Math.min(window.innerWidth * 0.6 + offset, window.innerWidth - 400);
+      const top = Math.min(window.innerHeight * 0.2 + offset, window.innerHeight - 300);
       
       furnace.style.left = `${left}px`;
       furnace.style.top = `${top}px`;
@@ -2173,6 +2187,10 @@
       titleBar.className = 'alchemy-title';
       titleBar.innerHTML = `
         <span>Alchemy Furnace</span>
+        <div class="scale-mode-toggle">
+          <span class="checkbox">[ ]</span>
+          <span>Content-Aware</span>
+        </div>
         <div class="notepad-title-buttons">
           <button class="title-button minimize">_</button>
           <button class="title-button maximize">□</button>
@@ -2192,13 +2210,123 @@
       // 组装窗口
       furnace.appendChild(titleBar);
       furnace.appendChild(content);
-      document.body.appendChild(furnace);
+      
+      // 添加调整大小的手柄
+      const resizeHandle = document.createElement('div');
+      resizeHandle.className = 'resize-handle bottom-right';
+      furnace.appendChild(resizeHandle);
 
-      // 窗口拖拽功能
       let isDragging = false;
       let isResizing = false;
       let startX, startY, startWidth, startHeight;
       let furnaceX, furnaceY;
+      let isContentAwareEnabled = false;
+
+      // 添加 Content-Aware Scale 切换功能
+      const scaleToggle = titleBar.querySelector('.scale-mode-toggle');
+      const checkbox = scaleToggle.querySelector('.checkbox');
+      
+      scaleToggle.addEventListener('click', () => {
+        isContentAwareEnabled = !isContentAwareEnabled;
+        checkbox.textContent = isContentAwareEnabled ? '[*]' : '[ ]';
+        console.log('Content-Aware Scale mode:', isContentAwareEnabled);
+      });
+
+      // 修改鼠标移动处理函数
+      function handleMouseMove(e) {
+        if (isDragging) {
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          
+          let newX = furnaceX + dx;
+          let newY = furnaceY + dy;
+          
+          furnace.style.left = newX + 'px';
+          furnace.style.top = newY + 'px';
+        }
+        
+        if (isResizing) {
+          const width = Math.max(120, startWidth + (e.clientX - startX));
+          const height = Math.max(100, startHeight + (e.clientY - startY));
+          
+          if (isContentAwareEnabled) {
+            console.log('Attempting Content-Aware Scale...');
+            // Content-Aware Scale 模式
+            const img = furnace.querySelector('img');
+            
+            // 确保图片已完全加载
+            if (!img.complete) {
+              console.log('Image not yet loaded, waiting...');
+              return;
+            }
+            
+            console.log('Original image dimensions:', img.naturalWidth, 'x', img.naturalHeight);
+            
+            try {
+              // 检查 SeamCarver 是否可用
+              if (typeof window.SeamCarver === 'undefined') {
+                console.error('SeamCarver is not defined! Check if seam.js is loaded correctly.');
+                return;
+              }
+              
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              
+              // 设置 canvas 尺寸为原始图片尺寸
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              
+              // 绘制原始图片到 canvas
+              ctx.drawImage(img, 0, 0);
+              console.log('Image drawn to canvas');
+              
+              // 获取图片数据
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              console.log('Image data obtained:', imageData.width, 'x', imageData.height);
+              
+              // 创建 SeamCarver 实例
+              const carver = new window.SeamCarver(imageData);
+              console.log('SeamCarver instance created');
+              
+              // 计算目标宽度
+              const targetWidth = Math.floor(width * (img.naturalWidth / startWidth));
+              console.log('Target width:', targetWidth);
+              
+              // 使用 Seam Carving 调整大小
+              const resizedImageData = carver.resize(targetWidth);
+              console.log('Resize completed');
+              
+              // 创建新的 canvas 显示结果
+              const resultCanvas = document.createElement('canvas');
+              resultCanvas.width = resizedImageData.width;
+              resultCanvas.height = resizedImageData.height;
+              const resultCtx = resultCanvas.getContext('2d');
+              resultCtx.putImageData(resizedImageData, 0, 0);
+              
+              // 更新图片
+              img.src = resultCanvas.toDataURL();
+              console.log('Image updated with seam-carved result');
+            } catch (error) {
+              console.error('Error during Content-Aware Scale:', error);
+              console.error('Error stack:', error.stack);
+            }
+          } else {
+            // 普通缩放模式
+            const img = furnace.querySelector('img');
+            if (img) {
+              img.style.maxWidth = '100%';
+              img.style.maxHeight = '100%';
+              img.style.width = 'auto';
+              img.style.height = 'auto';
+              img.style.objectFit = 'contain';
+            }
+          }
+          
+          // 更新窗口大小
+          furnace.style.width = width + 'px';
+          furnace.style.height = height + 'px';
+        }
+      }
 
       // 提升窗口层级
       function bringToFront() {
@@ -2218,7 +2346,7 @@
 
       // 拖拽功能
       titleBar.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.notepad-title-buttons')) return;
+        if (e.target.closest('.notepad-title-buttons') || e.target.closest('.scale-mode-toggle')) return;
         
         isDragging = true;
         furnace.classList.add('dragging');
@@ -2233,94 +2361,16 @@
       });
 
       // 调整大小功能
-      furnace.addEventListener('mousedown', (e) => {
+      resizeHandle.addEventListener('mousedown', (e) => {
+        isResizing = true;
         const rect = furnace.getBoundingClientRect();
-        const isBottomEdge = e.clientY > rect.bottom - 10;
-        const isRightEdge = e.clientX > rect.right - 10;
-        
-        if (isBottomEdge && isRightEdge) {
-          isResizing = true;
-          startX = e.clientX;
-          startY = e.clientY;
-          startWidth = rect.width;
-          startHeight = rect.height;
-          e.preventDefault();
-          bringToFront();
-        }
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = rect.width;
+        startHeight = rect.height;
+        e.preventDefault();
+        bringToFront();
       });
-
-      // 移动和调整大小的处理
-      function handleMouseMove(e) {
-        if (isDragging) {
-          const dx = e.clientX - startX;
-          const dy = e.clientY - startY;
-          
-          let newX = furnaceX + dx;
-          let newY = furnaceY + dy;
-          
-          furnace.style.left = newX + 'px';
-          furnace.style.top = newY + 'px';
-        }
-        
-        if (isResizing) {
-          const width = startWidth + (e.clientX - startX);
-          const height = startHeight + (e.clientY - startY);
-          
-          if (width >= 120) {
-            // 使用 Seam Carving 调整图片大小
-            const img = furnace.querySelector('img');
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // 设置 canvas 尺寸为原始图片尺寸
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            
-            // 绘制原始图片到 canvas
-            ctx.drawImage(img, 0, 0);
-            
-            // 获取图片数据
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            
-            // 创建 SeamCarver 实例
-            const carver = new SeamCarver(imageData);
-            
-            // 计算目标宽度
-            const targetWidth = Math.floor(width * (img.naturalWidth / startWidth));
-            
-            // 使用 Seam Carving 调整大小
-            const resizedImageData = carver.resize(targetWidth);
-            
-            // 创建新的 canvas 显示结果
-            const resultCanvas = document.createElement('canvas');
-            resultCanvas.width = resizedImageData.width;
-            resultCanvas.height = resizedImageData.height;
-            const resultCtx = resultCanvas.getContext('2d');
-            resultCtx.putImageData(resizedImageData, 0, 0);
-            
-            // 更新图片
-            img.src = resultCanvas.toDataURL();
-            furnace.style.width = width + 'px';
-          }
-          
-          if (height >= 100) {
-            furnace.style.height = height + 'px';
-          }
-        }
-
-        // 更新鼠标样式
-        if (!isDragging && !isResizing) {
-          const rect = furnace.getBoundingClientRect();
-          const isBottomEdge = e.clientY > rect.bottom - 10;
-          const isRightEdge = e.clientX > rect.right - 10;
-          
-          if (isBottomEdge && isRightEdge) {
-            furnace.style.cursor = 'se-resize';
-          } else {
-            furnace.style.cursor = 'default';
-          }
-        }
-      }
 
       // 注册全局鼠标事件
       document.addEventListener('mousemove', handleMouseMove);
@@ -2343,7 +2393,8 @@
       // 处理图片点击
       document.querySelector('.notepad-content').addEventListener('click', (e) => {
         if (e.target.tagName === 'IMG') {
-          createAlchemyFurnace(e.target.src);
+          const furnace = createAlchemyFurnace(e.target.src);
+          document.body.appendChild(furnace); // 添加到文档中
         }
       });
 
