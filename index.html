@@ -657,12 +657,14 @@
     /* 修改图片样式 */
     .notepad-content img {
       max-width: 100%;
-      max-height: calc(80vh - 100px);
       height: auto;
-      width: auto;
-      display: block;
-      margin: 10px auto;
-      object-fit: contain;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      pointer-events: auto;  /* 确保图片可以接收点击事件 */
+    }
+
+    .notepad-content img:hover {
+      transform: scale(1.02);
     }
 
     /* 修改字符网格样式 */
@@ -740,10 +742,10 @@
       overflow: hidden;
       width: 400px;
       height: 300px;
-      min-width: 120px;
-      min-height: 100px;
+      min-width: 50px;  /* 减小最小宽度 */
+      min-height: 50px; /* 减小最小高度 */
       z-index: 1001;
-      position: relative; /* 确保相对定位 */
+      position: relative;
     }
 
     /* 移除之前的 ::after 样式 */
@@ -780,19 +782,22 @@
 
     .alchemy-content {
       flex: 1;
-      padding: 10px;
+      padding: 0;
+      margin: 0;
       background: #ffffff;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: auto;
+      flex-direction: column;  /* 确保内容垂直排列 */
+      overflow: hidden;
       position: relative;
     }
 
     .alchemy-content img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;  /* 改为 cover 确保图片填充整个容器 */
+      margin: 0;
+      padding: 0;
+      display: block;
     }
 
     /* 修改 Portal 中图片的样式 */
@@ -801,6 +806,7 @@
       height: auto;
       cursor: pointer;
       transition: transform 0.2s ease;
+      pointer-events: auto;  /* 确保图片可以接收点击事件 */
     }
 
     .notepad-content img:hover {
@@ -950,6 +956,25 @@
   </div>
 
   <script>
+    // 添加 SeamCarver 加载检查
+    let seamCarverLoaded = false;
+    document.addEventListener('DOMContentLoaded', () => {
+      // 检查 SeamCarver 是否已加载
+      if (typeof window.SeamCarver === 'undefined') {
+        console.log('Waiting for SeamCarver to load...');
+        const checkSeamCarver = setInterval(() => {
+          if (typeof window.SeamCarver !== 'undefined') {
+            console.log('SeamCarver loaded successfully!');
+            seamCarverLoaded = true;
+            clearInterval(checkSeamCarver);
+          }
+        }, 100);
+      } else {
+        console.log('SeamCarver already loaded!');
+        seamCarverLoaded = true;
+      }
+    });
+
     // 添加文本数组
     const textSequence = [
       "Pet lovebirds often use their beaks to carefully cut pieces of paper and tuck them into their tail feathers.",
@@ -968,16 +993,16 @@
 
     // 添加鸟类名称数组
     const birds = [
-      'Common_lovebird',
-      'Rosy-faced_lovebird',
-      'Fischer%27s_lovebird',
-      'Yellow-collared_lovebird',
+      'Rainbow_lorikeet',
       'Budgerigar',
       'Cockatiel',
+      'Agapornis',  // 更改为学名
       'African_grey_parrot',
       'Galah',
-      'Rainbow_lorikeet',
-      'Monk_parakeet'
+      'Monk_parakeet',
+      'Cockatoo',
+      'Sun_conure',
+      'Pacific_parrotlet'
     ];
 
     // 添加模式管理变量
@@ -1488,8 +1513,8 @@
       async function getRandomBirdImage() {
         const randomBird = birds[Math.floor(Math.random() * birds.length)];
         try {
-          // 添加必要的参数以支持CORS和JSON格式
-          const url = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages|pageprops&format=json&piprop=thumbnail&titles=${randomBird}&pithumbsize=300&redirects&origin=*`;
+          // 使用更可靠的 REST API 端点，添加更大的图片尺寸
+          const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${randomBird}`;
           
           console.log('Fetching image for:', randomBird); // 调试日志
           const response = await fetch(url);
@@ -1498,22 +1523,20 @@
           const data = await response.json();
           console.log('API response:', data); // 调试日志
           
-          if (!data.query || !data.query.pages) throw new Error('Invalid API response');
-          
-          const pages = data.query.pages;
-          const pageId = Object.keys(pages)[0];
-          const page = pages[pageId];
-          
-          if (!page || !page.thumbnail || !page.thumbnail.source) {
+          // 如果没有缩略图，尝试获取原始图片
+          if (!data.originalimage && (!data.thumbnail || !data.thumbnail.source)) {
             throw new Error('No image found');
           }
+          
+          // 优先使用原始图片，如果没有则使用缩略图
+          const imageUrl = data.originalimage ? data.originalimage.source : data.thumbnail.source;
           
           // 预加载图片
           return new Promise((resolve, reject) => {
             const img = new Image();
-            img.onload = () => resolve(page.thumbnail.source);
+            img.onload = () => resolve(imageUrl);
             img.onerror = () => reject(new Error('Failed to load image'));
-            img.src = page.thumbnail.source;
+            img.src = imageUrl;
           });
         } catch (error) {
           console.error('Error fetching bird image:', error);
@@ -2173,14 +2196,23 @@
       furnace.className = 'alchemy-furnace';
       furnace.style.display = 'flex';
       
-      // 计算新窗口的位置（错开放置）
-      const existingFurnaces = document.querySelectorAll('.alchemy-furnace');
-      const offset = existingFurnaces.length * 30;
-      const left = Math.min(window.innerWidth * 0.6 + offset, window.innerWidth - 400);
-      const top = Math.min(window.innerHeight * 0.2 + offset, window.innerHeight - 300);
+      // 初始位置和大小将由 centerWindow 函数设置
+      furnace.style.position = 'fixed';
+      
+      // 计算新窗口的位置（居中放置）
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      const furnaceWidth = 400;  // 默认宽度
+      const furnaceHeight = 300; // 默认高度
+      
+      // 确保窗口在视图中心，并留有边距
+      const left = Math.max(0, Math.min(windowWidth - furnaceWidth, (windowWidth - furnaceWidth) / 2));
+      const top = Math.max(0, Math.min(windowHeight - furnaceHeight, (windowHeight - furnaceHeight) / 2));
       
       furnace.style.left = `${left}px`;
       furnace.style.top = `${top}px`;
+      furnace.style.width = `${furnaceWidth}px`;
+      furnace.style.height = `${furnaceHeight}px`;
 
       // 创建标题栏
       const titleBar = document.createElement('div');
@@ -2216,202 +2248,285 @@
       resizeHandle.className = 'resize-handle bottom-right';
       furnace.appendChild(resizeHandle);
 
-      let isDragging = false;
-      let isResizing = false;
-      let startX, startY, startWidth, startHeight;
-      let furnaceX, furnaceY;
-      let isContentAwareEnabled = false;
+      // 为每个窗口创建独立的状态对象
+      const state = {
+        isDragging: false,
+        isResizing: false,
+        startX: 0,
+        startY: 0,
+        furnaceX: 0,
+        furnaceY: 0,
+        startWidth: 0,
+        startHeight: 0,
+        seamCarver: null,
+        isContentAwareEnabled: false
+      };
 
-      // 添加 Content-Aware Scale 切换功能
+      // 切换 Content-Aware 模式
       const scaleToggle = titleBar.querySelector('.scale-mode-toggle');
       const checkbox = scaleToggle.querySelector('.checkbox');
       
       scaleToggle.addEventListener('click', () => {
-        isContentAwareEnabled = !isContentAwareEnabled;
-        checkbox.textContent = isContentAwareEnabled ? '[*]' : '[ ]';
-        console.log('Content-Aware Scale mode:', isContentAwareEnabled);
+        state.isContentAwareEnabled = !state.isContentAwareEnabled;
+        checkbox.textContent = state.isContentAwareEnabled ? '[*]' : '[ ]';
       });
 
-      // 修改鼠标移动处理函数
-      function handleMouseMove(e) {
-        if (isDragging) {
-          const dx = e.clientX - startX;
-          const dy = e.clientY - startY;
-          
-          let newX = furnaceX + dx;
-          let newY = furnaceY + dy;
-          
-          furnace.style.left = newX + 'px';
-          furnace.style.top = newY + 'px';
-        }
-        
-        if (isResizing) {
-          const width = Math.max(120, startWidth + (e.clientX - startX));
-          const height = Math.max(100, startHeight + (e.clientY - startY));
-          
-          if (isContentAwareEnabled) {
-            console.log('Attempting Content-Aware Scale...');
-            // Content-Aware Scale 模式
-            const img = furnace.querySelector('img');
-            
-            // 确保图片已完全加载
-            if (!img.complete) {
-              console.log('Image not yet loaded, waiting...');
-              return;
-            }
-            
-            console.log('Original image dimensions:', img.naturalWidth, 'x', img.naturalHeight);
-            
-            try {
-              // 检查 SeamCarver 是否可用
-              if (typeof window.SeamCarver === 'undefined') {
-                console.error('SeamCarver is not defined! Check if seam.js is loaded correctly.');
-                return;
-              }
-              
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-              
-              // 设置 canvas 尺寸为原始图片尺寸
-              canvas.width = img.naturalWidth;
-              canvas.height = img.naturalHeight;
-              
-              // 绘制原始图片到 canvas
-              ctx.drawImage(img, 0, 0);
-              console.log('Image drawn to canvas');
-              
-              // 获取图片数据
-              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-              console.log('Image data obtained:', imageData.width, 'x', imageData.height);
-              
-              // 创建 SeamCarver 实例
-              const carver = new window.SeamCarver(imageData);
-              console.log('SeamCarver instance created');
-              
-              // 计算目标宽度
-              const targetWidth = Math.floor(width * (img.naturalWidth / startWidth));
-              console.log('Target width:', targetWidth);
-              
-              // 使用 Seam Carving 调整大小
-              const resizedImageData = carver.resize(targetWidth);
-              console.log('Resize completed');
-              
-              // 创建新的 canvas 显示结果
-              const resultCanvas = document.createElement('canvas');
-              resultCanvas.width = resizedImageData.width;
-              resultCanvas.height = resizedImageData.height;
-              const resultCtx = resultCanvas.getContext('2d');
-              resultCtx.putImageData(resizedImageData, 0, 0);
-              
-              // 更新图片
-              img.src = resultCanvas.toDataURL();
-              console.log('Image updated with seam-carved result');
-            } catch (error) {
-              console.error('Error during Content-Aware Scale:', error);
-              console.error('Error stack:', error.stack);
-            }
+      // 拖拽手柄按下
+      resizeHandle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        state.isResizing = true;
+
+        // 记录开始状态
+        const rect = furnace.getBoundingClientRect();
+        state.startX = e.clientX;
+        state.startY = e.clientY;
+        state.startWidth = rect.width;
+        state.startHeight = rect.height;
+
+        if (state.isContentAwareEnabled) {
+          // 初始化 SeamCarver
+          const tempCanvas = document.createElement('canvas');
+          const tctx = tempCanvas.getContext('2d');
+          const imgEl = furnace.querySelector('img');
+
+          const MAX_SIZE = 800;
+          let scaleFactor = 1;
+          if (imgEl.naturalWidth > MAX_SIZE || imgEl.naturalHeight > MAX_SIZE) {
+            scaleFactor = MAX_SIZE / Math.max(imgEl.naturalWidth, imgEl.naturalHeight);
+            tempCanvas.width = imgEl.naturalWidth * scaleFactor;
+            tempCanvas.height = imgEl.naturalHeight * scaleFactor;
           } else {
-            // 普通缩放模式
-            const img = furnace.querySelector('img');
-            if (img) {
-              img.style.maxWidth = '100%';
-              img.style.maxHeight = '100%';
-              img.style.width = 'auto';
-              img.style.height = 'auto';
-              img.style.objectFit = 'contain';
-            }
+            tempCanvas.width = imgEl.naturalWidth;
+            tempCanvas.height = imgEl.naturalHeight;
           }
-          
-          // 更新窗口大小
-          furnace.style.width = width + 'px';
-          furnace.style.height = height + 'px';
+
+          tctx.drawImage(imgEl, 0, 0, tempCanvas.width, tempCanvas.height);
+          const imageData = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+
+          state.seamCarver = new window.SeamCarver(imageData);
+          state.seamCarver.scaleFactor = scaleFactor;
         }
-      }
 
-      // 提升窗口层级
-      function bringToFront() {
-        const allFurnaces = document.querySelectorAll('.alchemy-furnace');
-        let maxZ = 1001;
-        allFurnaces.forEach(f => {
-          const z = parseInt(getComputedStyle(f).zIndex) || 1001;
-          maxZ = Math.max(maxZ, z);
-        });
-        furnace.style.zIndex = maxZ + 1;
-      }
-
-      // 点击窗口时提升层级
-      furnace.addEventListener('mousedown', () => {
-        bringToFront();
+        bringToFront(furnace);
       });
 
       // 拖拽功能
       titleBar.addEventListener('mousedown', (e) => {
         if (e.target.closest('.notepad-title-buttons') || e.target.closest('.scale-mode-toggle')) return;
         
-        isDragging = true;
+        e.preventDefault();
+        e.stopPropagation();
+        state.isDragging = true;
         furnace.classList.add('dragging');
         
         const rect = furnace.getBoundingClientRect();
-        furnaceX = rect.left;
-        furnaceY = rect.top;
-        startX = e.clientX;
-        startY = e.clientY;
+        state.furnaceX = rect.left;
+        state.furnaceY = rect.top;
+        state.startX = e.clientX;
+        state.startY = e.clientY;
         
-        bringToFront();
+        bringToFront(furnace);
       });
 
-      // 调整大小功能
-      resizeHandle.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        const rect = furnace.getBoundingClientRect();
-        startX = e.clientX;
-        startY = e.clientY;
-        startWidth = rect.width;
-        startHeight = rect.height;
-        e.preventDefault();
-        bringToFront();
-      });
+      // 处理鼠标移动
+      const handleMouseMove = (e) => {
+        if (state.isDragging) {
+          const dx = e.clientX - state.startX;
+          const dy = e.clientY - state.startY;
+          
+          let newX = state.furnaceX + dx;
+          let newY = state.furnaceY + dy;
+          
+          // 限制窗口不完全移出视图
+          const rect = furnace.getBoundingClientRect();
+          const maxX = window.innerWidth - rect.width / 2;
+          const maxY = window.innerHeight - rect.height / 2;
+          const minX = -rect.width / 2;
+          const minY = -rect.height / 2;
+          
+          newX = Math.max(minX, Math.min(maxX, newX));
+          newY = Math.max(minY, Math.min(maxY, newY));
+          
+          furnace.style.left = newX + 'px';
+          furnace.style.top = newY + 'px';
+        }
+        
+        if (state.isResizing) {
+          const dx = e.clientX - state.startX;
+          const dy = e.clientY - state.startY;
+          
+          const minWidth = 50;
+          const maxWidth = window.innerWidth * 0.9;
+          const newWidth = Math.max(minWidth, Math.min(maxWidth, state.startWidth + dx));
+          
+          const minHeight = 50;
+          const maxHeight = window.innerHeight * 0.9;
+          const newHeight = Math.max(minHeight, Math.min(maxHeight, state.startHeight + dy));
+          
+          furnace.style.width = newWidth + 'px';
+          furnace.style.height = newHeight + 'px';
+          
+          const imgEl = furnace.querySelector('img');
+          if (state.isContentAwareEnabled && state.seamCarver) {
+            const targetWidth = Math.floor(newWidth * state.seamCarver.scaleFactor);
+            const scaled = state.seamCarver.resize(targetWidth);
+            const resultCanvas = document.createElement('canvas');
+            resultCanvas.width = scaled.width;
+            resultCanvas.height = scaled.height;
+            resultCanvas.getContext('2d').putImageData(scaled, 0, 0);
+            imgEl.src = resultCanvas.toDataURL();
+          } else {
+            imgEl.style.cssText = `
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              margin: 0;
+              padding: 0;
+              display: block;
+            `;
+          }
+        }
+      };
 
-      // 注册全局鼠标事件
+      // 处理鼠标抬起
+      const handleMouseUp = () => {
+        if (state.isDragging || state.isResizing) {
+          state.isDragging = false;
+          state.isResizing = false;
+          state.seamCarver = null;
+          furnace.classList.remove('dragging');
+        }
+      };
+
+      // 添加事件监听器
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', () => {
-        isDragging = false;
-        isResizing = false;
-        furnace.classList.remove('dragging');
-      });
+      document.addEventListener('mouseup', handleMouseUp);
 
       // 关闭按钮功能
       const closeButton = titleBar.querySelector('.title-button.close');
       closeButton.addEventListener('click', () => {
+        // 移除事件监听器
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
         furnace.remove();
       });
 
       return furnace;
     }
 
+    // 将窗口置于顶层的函数
+    function bringToFront(furnace) {
+      const maxZIndex = Array.from(document.querySelectorAll('.alchemy-furnace'))
+        .reduce((max, f) => Math.max(max, parseInt(getComputedStyle(f).zIndex) || 0), 1000);
+      furnace.style.zIndex = maxZIndex + 1;
+    }
+
     function initAlchemyFurnace() {
-      // 处理图片点击
-      document.querySelector('.notepad-content').addEventListener('click', (e) => {
-        if (e.target.tagName === 'IMG') {
-          const furnace = createAlchemyFurnace(e.target.src);
-          document.body.appendChild(furnace); // 添加到文档中
+      // 使用普通对象来存储窗口映射
+      const windowRegistry = {};
+
+      // 使用事件委托来处理图片点击
+      document.addEventListener('click', (e) => {
+        // 检查点击的是否是 Portal 中的图片
+        if (e.target.tagName.toLowerCase() === 'img' && 
+            e.target.closest('.notepad-content')) {
+          
+          const imgSrc = e.target.src;
+          console.log('Clicked image source:', imgSrc);
+          
+          // 检查是否已经存在该图片的窗口
+          if (windowRegistry[imgSrc]) {
+            const existingFurnace = windowRegistry[imgSrc];
+            
+            // 检查窗口是否仍然存在于文档中
+            if (document.body.contains(existingFurnace)) {
+              console.log('Found existing window, bringing to front');
+              bringToFront(existingFurnace);
+              
+              // 确保窗口可见
+              existingFurnace.style.display = 'flex';
+              
+              // 如果窗口位置不合适，重新调整到视图中心
+              const rect = existingFurnace.getBoundingClientRect();
+              if (rect.right > window.innerWidth || rect.bottom > window.innerHeight ||
+                  rect.left < 0 || rect.top < 0) {
+                centerWindow(existingFurnace);
+              }
+              return;
+            } else {
+              console.log('Window was closed, removing from registry');
+              delete windowRegistry[imgSrc];
+            }
+          }
+
+          console.log('Creating new window');
+          const furnace = createAlchemyFurnace(imgSrc);
+          
+          // 确保新窗口在视图中心
+          document.body.appendChild(furnace);
+          centerWindow(furnace);
+          
+          // 注册新窗口
+          windowRegistry[imgSrc] = furnace;
+          
+          // 显示窗口并确保在最上层
+          furnace.style.display = 'flex';
+          bringToFront(furnace);
+
+          // 当窗口关闭时从注册表中移除
+          const closeButton = furnace.querySelector('.title-button.close');
+          closeButton.addEventListener('click', () => {
+            console.log('Window closed, removing from registry');
+            delete windowRegistry[imgSrc];
+            furnace.remove();
+          });
         }
       });
 
       // 处理窗口大小改变
       window.addEventListener('resize', () => {
+        // 获取所有当前显示的窗口
         const furnaces = document.querySelectorAll('.alchemy-furnace');
         furnaces.forEach(furnace => {
           const rect = furnace.getBoundingClientRect();
-          if (rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
-            const maxX = window.innerWidth - rect.width;
-            const maxY = window.innerHeight - rect.height;
-            furnace.style.left = Math.min(rect.left, maxX) + 'px';
-            furnace.style.top = Math.min(rect.top, maxY) + 'px';
+          
+          // 如果窗口超出视图范围，重新居中
+          if (rect.right > window.innerWidth || rect.bottom > window.innerHeight ||
+              rect.left < 0 || rect.top < 0) {
+            centerWindow(furnace);
           }
         });
       });
     }
+
+    // 添加窗口居中函数
+    function centerWindow(furnace) {
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      const furnaceWidth = 400;  // 默认宽度
+      const furnaceHeight = 300; // 默认高度
+      
+      const left = Math.max(0, Math.min(windowWidth - furnaceWidth, (windowWidth - furnaceWidth) / 2));
+      const top = Math.max(0, Math.min(windowHeight - furnaceHeight, (windowHeight - furnaceHeight) / 2));
+      
+      furnace.style.left = `${left}px`;
+      furnace.style.top = `${top}px`;
+      furnace.style.width = `${furnaceWidth}px`;
+      furnace.style.height = `${furnaceHeight}px`;
+    }
+
+    // 确保只初始化一次
+    let alchemyInitialized = false;
+
+    // 在文档加载完成后初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!alchemyInitialized) {
+        console.log('Initializing Alchemy Furnace functionality');
+        initAlchemyFurnace();
+        alchemyInitialized = true;
+      }
+    });
 
     // 确保在页面加载时初始化网格系统
     let grid;
