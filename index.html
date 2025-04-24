@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nest Displacement</title>
+  <script src="seam.js"></script>
   <style>
     body {
       margin: 0;
@@ -725,6 +726,87 @@
     .minimized-icon {
       pointer-events: auto;
     }
+
+    /* 修改 Alchemy Furnace 样式 */
+    .alchemy-furnace {
+      position: fixed;
+      background: #fff;
+      border: 2px solid;
+      border-color: #dfdfdf #808080 #808080 #dfdfdf;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+      display: none;
+      flex-direction: column;
+      font-family: 'MS Sans Serif', Arial, sans-serif;
+      resize: both;
+      overflow: hidden;
+      width: 400px;
+      height: 300px;
+      min-width: 120px;  /* 降低最小宽度 */
+      min-height: 100px; /* 降低最小高度 */
+      z-index: 1001;
+    }
+
+    .alchemy-furnace.dragging {
+      transition: none;
+      cursor: move;
+    }
+
+    .alchemy-title {
+      background: #000080;
+      color: white;
+      padding: 3px 5px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+      user-select: none;
+    }
+
+    .alchemy-content {
+      flex: 1;
+      padding: 10px;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      position: relative;
+    }
+
+    .alchemy-content img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* 添加调整大小的手柄样式 */
+    .resize-handle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: transparent;
+      cursor: nw-resize;
+      z-index: 1002;
+    }
+
+    .resize-handle.bottom-right {
+      right: 0;
+      bottom: 0;
+      cursor: se-resize;
+    }
+
+    /* 修改 Portal 中图片的样式 */
+    .notepad-content img {
+      max-width: 100%;
+      height: auto;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .notepad-content img:hover {
+      transform: scale(1.02);
+    }
   </style>
 </head>
 <body>
@@ -832,6 +914,19 @@
   <!-- 添加炼金术解锁提示的HTML -->
   <div class="portal-text">portal Setup Unlocked</div>
   <div class="portal-emoji">🎁</div>
+
+  <!-- 添加 Alchemy Furnace HTML -->
+  <div class="alchemy-furnace">
+    <div class="alchemy-title">
+      <span>Alchemy Furnace</span>
+      <div class="notepad-title-buttons">
+        <button class="title-button minimize">_</button>
+        <button class="title-button maximize">□</button>
+        <button class="title-button close">×</button>
+      </div>
+    </div>
+    <div class="alchemy-content"></div>
+  </div>
 
   <script>
     // 添加文本数组
@@ -2051,6 +2146,222 @@
       }
     }
 
+    // 添加 Alchemy Furnace 功能
+    function createAlchemyFurnace(imgSrc) {
+      // 创建新的窗口实例
+      const furnace = document.createElement('div');
+      furnace.className = 'alchemy-furnace';
+      furnace.style.display = 'flex';
+
+      // 计算新窗口的位置（错开放置）
+      const existingFurnaces = document.querySelectorAll('.alchemy-furnace');
+      const offset = existingFurnaces.length * 30;
+      
+      // 使用像素值而不是百分比，并确保窗口在可视范围内
+      const baseLeft = Math.min(window.innerWidth * 0.6, window.innerWidth - 500); // 基础左边距
+      const baseTop = Math.min(window.innerHeight * 0.2, window.innerHeight - 400); // 基础上边距
+      
+      // 计算实际位置，确保不会超出屏幕
+      const left = Math.min(baseLeft + offset, window.innerWidth - 400);
+      const top = Math.min(baseTop + offset, window.innerHeight - 300);
+      
+      furnace.style.left = `${left}px`;
+      furnace.style.top = `${top}px`;
+
+      // 创建标题栏
+      const titleBar = document.createElement('div');
+      titleBar.className = 'alchemy-title';
+      titleBar.innerHTML = `
+        <span>Alchemy Furnace</span>
+        <div class="notepad-title-buttons">
+          <button class="title-button minimize">_</button>
+          <button class="title-button maximize">□</button>
+          <button class="title-button close">×</button>
+        </div>
+      `;
+
+      // 创建内容区域
+      const content = document.createElement('div');
+      content.className = 'alchemy-content';
+      
+      // 创建图片元素
+      const img = document.createElement('img');
+      img.src = imgSrc;
+      content.appendChild(img);
+
+      // 组装窗口
+      furnace.appendChild(titleBar);
+      furnace.appendChild(content);
+      document.body.appendChild(furnace);
+
+      // 窗口拖拽功能
+      let isDragging = false;
+      let isResizing = false;
+      let startX, startY, startWidth, startHeight;
+      let furnaceX, furnaceY;
+
+      // 提升窗口层级
+      function bringToFront() {
+        const allFurnaces = document.querySelectorAll('.alchemy-furnace');
+        let maxZ = 1001;
+        allFurnaces.forEach(f => {
+          const z = parseInt(getComputedStyle(f).zIndex) || 1001;
+          maxZ = Math.max(maxZ, z);
+        });
+        furnace.style.zIndex = maxZ + 1;
+      }
+
+      // 点击窗口时提升层级
+      furnace.addEventListener('mousedown', () => {
+        bringToFront();
+      });
+
+      // 拖拽功能
+      titleBar.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.notepad-title-buttons')) return;
+        
+        isDragging = true;
+        furnace.classList.add('dragging');
+        
+        const rect = furnace.getBoundingClientRect();
+        furnaceX = rect.left;
+        furnaceY = rect.top;
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        bringToFront();
+      });
+
+      // 调整大小功能
+      furnace.addEventListener('mousedown', (e) => {
+        const rect = furnace.getBoundingClientRect();
+        const isBottomEdge = e.clientY > rect.bottom - 10;
+        const isRightEdge = e.clientX > rect.right - 10;
+        
+        if (isBottomEdge && isRightEdge) {
+          isResizing = true;
+          startX = e.clientX;
+          startY = e.clientY;
+          startWidth = rect.width;
+          startHeight = rect.height;
+          e.preventDefault();
+          bringToFront();
+        }
+      });
+
+      // 移动和调整大小的处理
+      function handleMouseMove(e) {
+        if (isDragging) {
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          
+          let newX = furnaceX + dx;
+          let newY = furnaceY + dy;
+          
+          furnace.style.left = newX + 'px';
+          furnace.style.top = newY + 'px';
+        }
+        
+        if (isResizing) {
+          const width = startWidth + (e.clientX - startX);
+          const height = startHeight + (e.clientY - startY);
+          
+          if (width >= 120) {
+            // 使用 Seam Carving 调整图片大小
+            const img = furnace.querySelector('img');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 设置 canvas 尺寸为原始图片尺寸
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            
+            // 绘制原始图片到 canvas
+            ctx.drawImage(img, 0, 0);
+            
+            // 获取图片数据
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // 创建 SeamCarver 实例
+            const carver = new SeamCarver(imageData);
+            
+            // 计算目标宽度
+            const targetWidth = Math.floor(width * (img.naturalWidth / startWidth));
+            
+            // 使用 Seam Carving 调整大小
+            const resizedImageData = carver.resize(targetWidth);
+            
+            // 创建新的 canvas 显示结果
+            const resultCanvas = document.createElement('canvas');
+            resultCanvas.width = resizedImageData.width;
+            resultCanvas.height = resizedImageData.height;
+            const resultCtx = resultCanvas.getContext('2d');
+            resultCtx.putImageData(resizedImageData, 0, 0);
+            
+            // 更新图片
+            img.src = resultCanvas.toDataURL();
+            furnace.style.width = width + 'px';
+          }
+          
+          if (height >= 100) {
+            furnace.style.height = height + 'px';
+          }
+        }
+
+        // 更新鼠标样式
+        if (!isDragging && !isResizing) {
+          const rect = furnace.getBoundingClientRect();
+          const isBottomEdge = e.clientY > rect.bottom - 10;
+          const isRightEdge = e.clientX > rect.right - 10;
+          
+          if (isBottomEdge && isRightEdge) {
+            furnace.style.cursor = 'se-resize';
+          } else {
+            furnace.style.cursor = 'default';
+          }
+        }
+      }
+
+      // 注册全局鼠标事件
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        isResizing = false;
+        furnace.classList.remove('dragging');
+      });
+
+      // 关闭按钮功能
+      const closeButton = titleBar.querySelector('.title-button.close');
+      closeButton.addEventListener('click', () => {
+        furnace.remove();
+      });
+
+      return furnace;
+    }
+
+    function initAlchemyFurnace() {
+      // 处理图片点击
+      document.querySelector('.notepad-content').addEventListener('click', (e) => {
+        if (e.target.tagName === 'IMG') {
+          createAlchemyFurnace(e.target.src);
+        }
+      });
+
+      // 处理窗口大小改变
+      window.addEventListener('resize', () => {
+        const furnaces = document.querySelectorAll('.alchemy-furnace');
+        furnaces.forEach(furnace => {
+          const rect = furnace.getBoundingClientRect();
+          if (rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
+            const maxX = window.innerWidth - rect.width;
+            const maxY = window.innerHeight - rect.height;
+            furnace.style.left = Math.min(rect.left, maxX) + 'px';
+            furnace.style.top = Math.min(rect.top, maxY) + 'px';
+          }
+        });
+      });
+    }
+
     // 确保在页面加载时初始化网格系统
     let grid;
     document.addEventListener('DOMContentLoaded', () => {
@@ -2060,6 +2371,7 @@
       initializeColorControl();
       initializeMinimize();
       initNotepadDrag();
+      initAlchemyFurnace();
     });
   </script>
 </body>
