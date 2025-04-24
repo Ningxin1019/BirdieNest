@@ -1128,11 +1128,73 @@
     }
 
     function skipToNest() {
+      // 隐藏初始界面
       document.querySelector('.initial-state').style.display = 'none';
       const nestGenerator = document.getElementById('nest-generator');
       nestGenerator.classList.remove('hidden');
-      // 直接激活所有功能
-      activateAllFeatures();
+      
+      // 移除黑白滤镜
+      document.body.style.filter = 'grayscale(0%)';
+      document.body.style.backgroundColor = getRandomPastelColor();
+      
+      // 显示并解锁星号按钮
+      const starButton = document.querySelector('.star-button');
+      starButton.style.display = 'block';
+      starButton.classList.add('unlocked');
+      isMenuUnlocked = true;
+      isColorUnlocked = true;
+      
+      // 隐藏所有解锁提示
+      const unlockEmoji = document.querySelector('.unlock-emoji');
+      const unlockText = document.querySelector('.unlock-text');
+      const portalText = document.querySelector('.portal-text');
+      const portalEmoji = document.querySelector('.portal-emoji');
+      const repeatText = document.querySelector('.repeat-text');
+      const againText = document.querySelector('.again-text');
+      
+      [unlockEmoji, unlockText, portalText, portalEmoji, repeatText, againText].forEach(element => {
+        if (element) {
+          element.style.display = 'none';
+          element.classList.remove('show');
+        }
+      });
+      
+      // 解锁所有效果选项
+      const effectItems = document.querySelectorAll('.effect-item');
+      effectItems.forEach(item => {
+        item.classList.add('unlocked');
+        const checkbox = item.querySelector('.checkbox');
+        if (checkbox) checkbox.disabled = false;
+      });
+      
+      // 激活最小化按钮
+      const minimizeButton = document.querySelector('.title-button.minimize');
+      minimizeButton.classList.add('active');
+      
+      // 初始化所有功能
+      initDragAndDrop();
+      initNotepad();
+      
+      // 显示记事本
+      const journeyContent = document.getElementById('journey-content');
+      journeyContent.classList.remove('hidden');
+      const stage1 = document.querySelector('.journey-stage-1');
+      stage1.style.opacity = '1';
+      
+      // 设置所有状态为已完成
+      portalUnlocked = true;
+      interactionCount = 4;
+      isFirstRestore = false;  // 防止 Repeat/Again 提示显示
+      portalShown = true;      // 防止 Portal Setup 提示显示
+      
+      // 移除相关事件监听器
+      const minimizedIcon = document.querySelector('.minimized-icon');
+      if (minimizedIcon) {
+        minimizedIcon.removeEventListener('dblclick', showRepeatText);
+      }
+      if (portalEmoji) {
+        portalEmoji.removeEventListener('click', unlockportalSetup);
+      }
     }
 
     function initDragAndDrop() {
