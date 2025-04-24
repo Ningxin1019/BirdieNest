@@ -683,6 +683,7 @@
       z-index: 0;
       background: transparent;
       pointer-events: auto;
+      user-select: none;
     }
 
     .grid-cell {
@@ -696,12 +697,18 @@
       box-sizing: border-box;
       pointer-events: auto;
       border: none;
-      background: transparent;
+      color: #000;
+      text-shadow: 0 0 1px rgba(0,0,0,0.3);
+      transition: all 0.2s ease;
     }
 
     .grid-cell.active {
-      background: rgba(0, 0, 255, 0.1);
+      background: rgba(0, 0, 255, 0.1) !important;
       border: 1px solid rgba(0, 0, 255, 0.3);
+    }
+
+    .grid-cell:not(:empty) {
+      background: rgba(255, 255, 255, 0.1);
     }
 
     /* 确保其他UI元素在网格之上但不阻挡点击 */
@@ -830,6 +837,24 @@
       margin-right: 5px;
       font-family: monospace;
     }
+
+    .apply-button {
+      background: #c0c0c0;
+      border: 1px solid;
+      border-color: #ffffff #808080 #808080 #ffffff;
+      color: #000;
+      padding: 1px 8px;
+      margin-right: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .apply-button .checkbox {
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
@@ -942,14 +967,16 @@
   <div class="alchemy-furnace">
     <div class="alchemy-title">
       <span>Alchemy Furnace</span>
-      <div class="scale-mode-toggle">
-        <span class="checkbox">[ ]</span>
-        <span>Content-Aware</span>
-      </div>
-      <div class="notepad-title-buttons">
-        <button class="title-button minimize">_</button>
-        <button class="title-button maximize">□</button>
-        <button class="title-button close">×</button>
+      <div style="display: flex; align-items: center;">
+        <button class="apply-button">
+          <span class="checkbox">[ ]</span>
+          <span>Apply</span>
+        </button>
+        <div class="notepad-title-buttons">
+          <button class="title-button minimize">_</button>
+          <button class="title-button maximize">□</button>
+          <button class="title-button close">×</button>
+        </div>
       </div>
     </div>
     <div class="alchemy-content"></div>
@@ -2037,17 +2064,20 @@
       constructor() {
         this.container = document.createElement('div');
         this.container.className = 'character-grid';
-        document.body.insertBefore(this.container, document.body.firstChild);
+        document.body.appendChild(this.container);
         
-        this.cellSize = 16;
         this.cells = new Map();
-        this.images = new Set();
         this.activeCellPos = null;
+        this.cellSize = 16;
         
-        console.log('CharacterGrid initialized');
+        // ASCII字符渐变，从暗到亮
+        this.asciiRamp = ' .:-=+*#%@';
         
         this.setupEventListeners();
         this.createInitialGrid();
+        
+        // 添加随机字符集
+        this.randomChars = '@#$%&*+=-_?/\\|{}[]()'.split('');
       }
 
       createInitialGrid() {
@@ -2064,6 +2094,142 @@
         window.addEventListener('resize', () => {
           this.createInitialGrid();
         });
+      }
+
+      setupEventListeners() {
+        // 添加拖放事件监听
+        this.container.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        });
+
+        this.container.addEventListener('drop', (e) => this.handleGridDrop(e));
+
+        // 点击事件处理
+        document.addEventListener('click', (e) => {
+          const skipElements = [
+            '.feather-outline',
+            '.effects-menu',
+            '.color-submenu',
+            '.portal-submenu',
+            '.start-button',
+            '.skip-link',
+            '.unlock-emoji',
+            '.minimized-icon'
+          ];
+
+          for (const selector of skipElements) {
+            if (e.target.closest(selector)) return;
+          }
+
+          const { x, y } = this.positionToGrid(e.clientX, e.clientY);
+          
+          if (this.activeCellPos) {
+            this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
+          }
+          this.activeCellPos = { x, y };
+          this.getCell(x, y).classList.add('active');
+        });
+
+        // 键盘输入处理
+        document.addEventListener('keypress', (e) => {
+          if (!this.activeCellPos || 
+              document.activeElement.tagName === 'INPUT' || 
+              document.activeElement.tagName === 'TEXTAREA' ||
+              e.target.closest('.feather-outline')) {
+            return;
+          }
+          
+          const char = String.fromCharCode(e.keyCode);
+          this.setCharacter(this.activeCellPos.x, this.activeCellPos.y, char);
+          this.moveCursor(1, 0); // 向右移动一格
+        });
+
+        // 方向键和退格键处理
+        document.addEventListener('keydown', (e) => {
+          if (!this.activeCellPos || 
+              document.activeElement.tagName === 'INPUT' || 
+              document.activeElement.tagName === 'TEXTAREA' ||
+              e.target.closest('.feather-outline')) {
+            return;
+          }
+          
+          switch(e.key) {
+            case 'ArrowLeft':
+              e.preventDefault();
+              this.moveCursor(-1, 0);
+              break;
+            case 'ArrowRight':
+              e.preventDefault();
+              this.moveCursor(1, 0);
+              break;
+            case 'ArrowUp':
+              e.preventDefault();
+              this.moveCursor(0, -1);
+              break;
+            case 'ArrowDown':
+              e.preventDefault();
+              this.moveCursor(0, 1);
+              break;
+            case 'Backspace':
+              e.preventDefault();
+              this.setCharacter(this.activeCellPos.x, this.activeCellPos.y, '');
+              this.moveCursor(-1, 0);
+              break;
+          }
+        });
+      }
+
+      handleGridDrop(e) {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => this.processImage(img, Math.floor(e.clientX / this.cellSize), Math.floor(e.clientY / this.cellSize));
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      processImage(img, startX, startY) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 设置合适的尺寸以保持图片比例
+        const maxWidth = 50; // 最大字符宽度
+        const scale = maxWidth / img.width;
+        const width = Math.floor(img.width * scale);
+        const height = Math.floor(img.height * scale);
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        
+        // 遍历像素并转换为字符
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            
+            // 计算亮度 (0-255)
+            const brightness = Math.floor((r + g + b) / 3);
+            
+            // 将亮度映射到ASCII字符
+            const charIndex = Math.floor(brightness / 256 * this.asciiRamp.length);
+            const char = this.asciiRamp[charIndex];
+            
+            // 在网格中设置字符
+            this.setCharacter(startX + x, startY + y, char);
+          }
+        }
       }
 
       createCell(x, y) {
@@ -2109,84 +2275,27 @@
         this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.add('active');
       }
 
-      setupEventListeners() {
-        // 点击网格
-        document.addEventListener('click', (e) => {
-          // 检查是否点击了需要特殊处理的元素
-          const skipElements = [
-            '.feather-outline',
-            '.effects-menu',
-            '.color-submenu',
-            '.portal-submenu',
-            '.start-button',
-            '.skip-link',
-            '.unlock-emoji',
-            '.minimized-icon'
-          ];
+      // 添加设置彩色字符的方法
+      setColoredCharacter(x, y, color, char = null) {
+        const cell = this.getCell(x, y);
+        if (!char) {
+          // 如果没有指定字符，使用随机字符
+          char = this.randomChars[Math.floor(Math.random() * this.randomChars.length)];
+        }
+        cell.textContent = char;
+        cell.style.color = color;
+      }
 
-          for (const selector of skipElements) {
-            if (e.target.closest(selector)) {
-              return;
-            }
-          }
+      // 添加设置背景色的方法
+      setCellBackground(x, y, color) {
+        const cell = this.getCell(x, y);
+        cell.style.backgroundColor = color;
+      }
 
-          // 获取点击位置相对于网格的坐标
-          const { x, y } = this.positionToGrid(e.clientX, e.clientY);
-          
-          if (this.activeCellPos) {
-            this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
-          }
-          this.activeCellPos = { x, y };
-          this.getCell(x, y).classList.add('active');
-        });
-
-        // 键盘输入
-        document.addEventListener('keypress', (e) => {
-          if (!this.activeCellPos || 
-              document.activeElement.tagName === 'INPUT' || 
-              document.activeElement.tagName === 'TEXTAREA' ||
-              e.target.closest('.feather-outline')) {
-            return;
-          }
-          
-          const char = String.fromCharCode(e.keyCode);
-          this.setCharacter(this.activeCellPos.x, this.activeCellPos.y, char);
-          this.moveCursor(1, 0); // 向右移动一格
-        });
-
-        // 方向键和退格键
-        document.addEventListener('keydown', (e) => {
-          if (!this.activeCellPos || 
-              document.activeElement.tagName === 'INPUT' || 
-              document.activeElement.tagName === 'TEXTAREA' ||
-              e.target.closest('.feather-outline')) {
-            return;
-          }
-          
-          switch(e.key) {
-            case 'ArrowLeft':
-              e.preventDefault();
-              this.moveCursor(-1, 0);
-              break;
-            case 'ArrowRight':
-              e.preventDefault();
-              this.moveCursor(1, 0);
-              break;
-            case 'ArrowUp':
-              e.preventDefault();
-              this.moveCursor(0, -1);
-              break;
-            case 'ArrowDown':
-              e.preventDefault();
-              this.moveCursor(0, 1);
-              break;
-            case 'Backspace':
-              e.preventDefault();
-              this.setCharacter(this.activeCellPos.x, this.activeCellPos.y, '');
-              this.moveCursor(-1, 0);
-              break;
-          }
-        });
+      // 清除背景色的方法
+      clearCellBackground(x, y) {
+        const cell = this.getCell(x, y);
+        cell.style.backgroundColor = 'transparent';
       }
     }
 
@@ -2196,19 +2305,21 @@
       furnace.className = 'alchemy-furnace';
       furnace.style.position = 'fixed';
       
-      // 创建标题栏
+      // 创建标题栏，添加 Apply 按钮
       const titleBar = document.createElement('div');
       titleBar.className = 'alchemy-title';
       titleBar.innerHTML = `
         <span>Alchemy Furnace</span>
-        <div class="scale-mode-toggle">
-          <span class="checkbox">[ ]</span>
-          <span>Content-Aware</span>
-        </div>
-        <div class="notepad-title-buttons">
-          <button class="title-button minimize">_</button>
-          <button class="title-button maximize">□</button>
-          <button class="title-button close">×</button>
+        <div style="display: flex; align-items: center;">
+          <button class="apply-button">
+            <span class="checkbox">[ ]</span>
+            <span>Apply</span>
+          </button>
+          <div class="notepad-title-buttons">
+            <button class="title-button minimize">_</button>
+            <button class="title-button maximize">□</button>
+            <button class="title-button close">×</button>
+          </div>
         </div>
       `;
 
@@ -2241,20 +2352,36 @@
         startWidth: 0,
         startHeight: 0,
         seamCarver: null,
-        isContentAwareEnabled: false
+        isApplied: false
       };
 
-      // Content-Aware 模式切换
-      const scaleToggle = titleBar.querySelector('.scale-mode-toggle');
-      const checkbox = scaleToggle.querySelector('.checkbox');
-      scaleToggle.addEventListener('click', () => {
-        state.isContentAwareEnabled = !state.isContentAwareEnabled;
-        checkbox.textContent = state.isContentAwareEnabled ? '[*]' : '[ ]';
-      });
+      // 初始化 SeamCarver
+      const initSeamCarver = () => {
+        const tempCanvas = document.createElement('canvas');
+        const tctx = tempCanvas.getContext('2d');
+        const imgEl = furnace.querySelector('img');
+
+        const MAX_SIZE = 800;
+        let scaleFactor = 1;
+        if (imgEl.naturalWidth > MAX_SIZE || imgEl.naturalHeight > MAX_SIZE) {
+          scaleFactor = MAX_SIZE / Math.max(imgEl.naturalWidth, imgEl.naturalHeight);
+          tempCanvas.width = imgEl.naturalWidth * scaleFactor;
+          tempCanvas.height = imgEl.naturalHeight * scaleFactor;
+        } else {
+          tempCanvas.width = imgEl.naturalWidth;
+          tempCanvas.height = imgEl.naturalHeight;
+        }
+
+        tctx.drawImage(imgEl, 0, 0, tempCanvas.width, tempCanvas.height);
+        const imageData = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+
+        state.seamCarver = new window.SeamCarver(imageData);
+        state.seamCarver.scaleFactor = scaleFactor;
+      };
 
       // 拖拽功能
       titleBar.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.notepad-title-buttons') || e.target.closest('.scale-mode-toggle')) return;
+        if (e.target.closest('.notepad-title-buttons')) return;
         
         e.preventDefault();
         e.stopPropagation();
@@ -2280,28 +2407,9 @@
         state.startWidth = rect.width;
         state.startHeight = rect.height;
 
-        // 初始化 SeamCarver（如果启用了 Content-Aware 模式）
-        if (state.isContentAwareEnabled) {
-          const tempCanvas = document.createElement('canvas');
-          const tctx = tempCanvas.getContext('2d');
-          const imgEl = furnace.querySelector('img');
-
-          const MAX_SIZE = 800;
-          let scaleFactor = 1;
-          if (imgEl.naturalWidth > MAX_SIZE || imgEl.naturalHeight > MAX_SIZE) {
-            scaleFactor = MAX_SIZE / Math.max(imgEl.naturalWidth, imgEl.naturalHeight);
-            tempCanvas.width = imgEl.naturalWidth * scaleFactor;
-            tempCanvas.height = imgEl.naturalHeight * scaleFactor;
-          } else {
-            tempCanvas.width = imgEl.naturalWidth;
-            tempCanvas.height = imgEl.naturalHeight;
-          }
-
-          tctx.drawImage(imgEl, 0, 0, tempCanvas.width, tempCanvas.height);
-          const imageData = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-
-          state.seamCarver = new window.SeamCarver(imageData);
-          state.seamCarver.scaleFactor = scaleFactor;
+        // 确保 SeamCarver 已初始化
+        if (!state.seamCarver) {
+          initSeamCarver();
         }
       });
 
@@ -2328,7 +2436,7 @@
           furnace.style.top = `${newY}px`;
         }
         
-        if (state.isResizing) {
+        if (state.isResizing && state.seamCarver) {
           const dx = e.clientX - state.startX;
           const dy = e.clientY - state.startY;
           
@@ -2344,24 +2452,13 @@
           furnace.style.height = `${newHeight}px`;
           
           const imgEl = furnace.querySelector('img');
-          if (state.isContentAwareEnabled && state.seamCarver) {
-            const targetWidth = Math.floor(newWidth * state.seamCarver.scaleFactor);
-            const scaled = state.seamCarver.resize(targetWidth);
-            const resultCanvas = document.createElement('canvas');
-            resultCanvas.width = scaled.width;
-            resultCanvas.height = scaled.height;
-            resultCanvas.getContext('2d').putImageData(scaled, 0, 0);
-            imgEl.src = resultCanvas.toDataURL();
-          } else {
-            imgEl.style.cssText = `
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-              margin: 0;
-              padding: 0;
-              display: block;
-            `;
-          }
+          const targetWidth = Math.floor(newWidth * state.seamCarver.scaleFactor);
+          const scaled = state.seamCarver.resize(targetWidth);
+          const resultCanvas = document.createElement('canvas');
+          resultCanvas.width = scaled.width;
+          resultCanvas.height = scaled.height;
+          resultCanvas.getContext('2d').putImageData(scaled, 0, 0);
+          imgEl.src = resultCanvas.toDataURL();
         }
       };
 
@@ -2370,7 +2467,6 @@
         if (state.isDragging || state.isResizing) {
           state.isDragging = false;
           state.isResizing = false;
-          state.seamCarver = null;  // 清理 SeamCarver 实例
           furnace.classList.remove('dragging');
         }
       };
@@ -2378,6 +2474,128 @@
       // 添加事件监听器
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+
+      // 图片加载完成后初始化 SeamCarver
+      img.onload = initSeamCarver;
+
+      // 添加 Apply 功能
+      const applyButton = titleBar.querySelector('.apply-button');
+      const checkbox = applyButton.querySelector('.checkbox');
+      
+      const applyImageToGrid = () => {
+        const rect = furnace.getBoundingClientRect();
+        const img = furnace.querySelector('img');
+        
+        // 创建 canvas 获取像素数据
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 使用实际图片尺寸
+        const imgRect = img.getBoundingClientRect();
+        canvas.width = imgRect.width;
+        canvas.height = imgRect.height;
+        
+        // 绘制当前显示的图片（包括 Content-Aware Scale 效果）
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // 计算网格起始位置，使用实际像素位置
+        const startGridX = Math.floor((rect.left + window.scrollX) / window.grid.cellSize);
+        const startGridY = Math.floor((rect.top + window.scrollY) / window.grid.cellSize);
+        
+        // 计算每个网格单元对应的像素区域
+        const pixelsPerCell = window.grid.cellSize;
+        
+        // 遍历图片区域
+        for (let y = 0; y < imgRect.height; y += pixelsPerCell) {
+          for (let x = 0; x < imgRect.width; x += pixelsPerCell) {
+            // 计算当前网格单元对应的像素区域的平均颜色
+            let r = 0, g = 0, b = 0, a = 0;
+            let count = 0;
+            
+            // 计算区域平均颜色
+            for (let py = y; py < Math.min(y + pixelsPerCell, imgRect.height); py++) {
+              for (let px = x; px < Math.min(x + pixelsPerCell, imgRect.width); px++) {
+                const i = (py * imageData.width + px) * 4;
+                r += imageData.data[i];
+                g += imageData.data[i + 1];
+                b += imageData.data[i + 2];
+                a += imageData.data[i + 3];
+                count++;
+              }
+            }
+            
+            // 计算平均值
+            r = Math.round(r / count);
+            g = Math.round(g / count);
+            b = Math.round(b / count);
+            a = Math.round(a / count);
+            
+            // 设置网格单元背景色
+            if (a > 0) { // 只处理非完全透明的像素
+              const color = `rgba(${r},${g},${b},${a/255})`;
+              const gridX = startGridX + Math.floor(x / pixelsPerCell);
+              const gridY = startGridY + Math.floor(y / pixelsPerCell);
+              window.grid.setCellBackground(gridX, gridY, color);
+            }
+          }
+        }
+      };
+
+      const removeImageFromGrid = () => {
+        const rect = furnace.getBoundingClientRect();
+        const img = furnace.querySelector('img');
+        const imgRect = img.getBoundingClientRect();
+        
+        const startGridX = Math.floor((rect.left + window.scrollX) / window.grid.cellSize);
+        const startGridY = Math.floor((rect.top + window.scrollY) / window.grid.cellSize);
+        const gridWidth = Math.ceil(imgRect.width / window.grid.cellSize);
+        const gridHeight = Math.ceil(imgRect.height / window.grid.cellSize);
+        
+        // 清除对应区域的背景色
+        for (let y = 0; y < gridHeight; y++) {
+          for (let x = 0; x < gridWidth; x++) {
+            window.grid.clearCellBackground(startGridX + x, startGridY + y);
+          }
+        }
+      };
+
+      applyButton.addEventListener('click', () => {
+        state.isApplied = !state.isApplied;
+        checkbox.textContent = state.isApplied ? '[*]' : '[ ]';
+        
+        if (state.isApplied) {
+          applyImageToGrid();
+        } else {
+          removeImageFromGrid();
+        }
+      });
+
+      // 修改拖拽处理，在拖拽时更新网格
+      const handleDrag = (e) => {
+        if (state.isDragging) {
+          // ... 保持现有拖拽代码 ...
+          
+          // 如果已应用，更新网格
+          if (state.isApplied) {
+            removeImageFromGrid();
+            applyImageToGrid();
+          }
+        }
+      };
+
+      // 修改调整大小处理，在调整大小时更新网格
+      const handleResize = (e) => {
+        if (state.isResizing) {
+          // ... 保持现有调整大小代码 ...
+          
+          // 如果已应用，更新网格
+          if (state.isApplied) {
+            removeImageFromGrid();
+            applyImageToGrid();
+          }
+        }
+      };
 
       return furnace;
     }
