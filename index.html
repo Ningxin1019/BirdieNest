@@ -2194,26 +2194,8 @@
     function createAlchemyFurnace(imgSrc) {
       const furnace = document.createElement('div');
       furnace.className = 'alchemy-furnace';
-      furnace.style.display = 'flex';
-      
-      // 初始位置和大小将由 centerWindow 函数设置
       furnace.style.position = 'fixed';
       
-      // 计算新窗口的位置（居中放置）
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
-      const furnaceWidth = 400;  // 默认宽度
-      const furnaceHeight = 300; // 默认高度
-      
-      // 确保窗口在视图中心，并留有边距
-      const left = Math.max(0, Math.min(windowWidth - furnaceWidth, (windowWidth - furnaceWidth) / 2));
-      const top = Math.max(0, Math.min(windowHeight - furnaceHeight, (windowHeight - furnaceHeight) / 2));
-      
-      furnace.style.left = `${left}px`;
-      furnace.style.top = `${top}px`;
-      furnace.style.width = `${furnaceWidth}px`;
-      furnace.style.height = `${furnaceHeight}px`;
-
       // 创建标题栏
       const titleBar = document.createElement('div');
       titleBar.className = 'alchemy-title';
@@ -2248,7 +2230,7 @@
       resizeHandle.className = 'resize-handle bottom-right';
       furnace.appendChild(resizeHandle);
 
-      // 为每个窗口创建独立的状态对象
+      // 窗口状态
       const state = {
         isDragging: false,
         isResizing: false,
@@ -2262,30 +2244,44 @@
         isContentAwareEnabled: false
       };
 
-      // 切换 Content-Aware 模式
+      // Content-Aware 模式切换
       const scaleToggle = titleBar.querySelector('.scale-mode-toggle');
       const checkbox = scaleToggle.querySelector('.checkbox');
-      
       scaleToggle.addEventListener('click', () => {
         state.isContentAwareEnabled = !state.isContentAwareEnabled;
         checkbox.textContent = state.isContentAwareEnabled ? '[*]' : '[ ]';
       });
 
-      // 拖拽手柄按下
+      // 拖拽功能
+      titleBar.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.notepad-title-buttons') || e.target.closest('.scale-mode-toggle')) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        state.isDragging = true;
+        furnace.classList.add('dragging');
+        
+        const rect = furnace.getBoundingClientRect();
+        state.furnaceX = rect.left;
+        state.furnaceY = rect.top;
+        state.startX = e.clientX;
+        state.startY = e.clientY;
+      });
+
+      // 调整大小功能
       resizeHandle.addEventListener('mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
         state.isResizing = true;
-
-        // 记录开始状态
+        
         const rect = furnace.getBoundingClientRect();
         state.startX = e.clientX;
         state.startY = e.clientY;
         state.startWidth = rect.width;
         state.startHeight = rect.height;
 
+        // 初始化 SeamCarver（如果启用了 Content-Aware 模式）
         if (state.isContentAwareEnabled) {
-          // 初始化 SeamCarver
           const tempCanvas = document.createElement('canvas');
           const tctx = tempCanvas.getContext('2d');
           const imgEl = furnace.querySelector('img');
@@ -2307,26 +2303,6 @@
           state.seamCarver = new window.SeamCarver(imageData);
           state.seamCarver.scaleFactor = scaleFactor;
         }
-
-        bringToFront(furnace);
-      });
-
-      // 拖拽功能
-      titleBar.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.notepad-title-buttons') || e.target.closest('.scale-mode-toggle')) return;
-        
-        e.preventDefault();
-        e.stopPropagation();
-        state.isDragging = true;
-        furnace.classList.add('dragging');
-        
-        const rect = furnace.getBoundingClientRect();
-        state.furnaceX = rect.left;
-        state.furnaceY = rect.top;
-        state.startX = e.clientX;
-        state.startY = e.clientY;
-        
-        bringToFront(furnace);
       });
 
       // 处理鼠标移动
@@ -2348,8 +2324,8 @@
           newX = Math.max(minX, Math.min(maxX, newX));
           newY = Math.max(minY, Math.min(maxY, newY));
           
-          furnace.style.left = newX + 'px';
-          furnace.style.top = newY + 'px';
+          furnace.style.left = `${newX}px`;
+          furnace.style.top = `${newY}px`;
         }
         
         if (state.isResizing) {
@@ -2364,8 +2340,8 @@
           const maxHeight = window.innerHeight * 0.9;
           const newHeight = Math.max(minHeight, Math.min(maxHeight, state.startHeight + dy));
           
-          furnace.style.width = newWidth + 'px';
-          furnace.style.height = newHeight + 'px';
+          furnace.style.width = `${newWidth}px`;
+          furnace.style.height = `${newHeight}px`;
           
           const imgEl = furnace.querySelector('img');
           if (state.isContentAwareEnabled && state.seamCarver) {
@@ -2394,7 +2370,7 @@
         if (state.isDragging || state.isResizing) {
           state.isDragging = false;
           state.isResizing = false;
-          state.seamCarver = null;
+          state.seamCarver = null;  // 清理 SeamCarver 实例
           furnace.classList.remove('dragging');
         }
       };
@@ -2402,15 +2378,6 @@
       // 添加事件监听器
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
-
-      // 关闭按钮功能
-      const closeButton = titleBar.querySelector('.title-button.close');
-      closeButton.addEventListener('click', () => {
-        // 移除事件监听器
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        furnace.remove();
-      });
 
       return furnace;
     }
@@ -2423,97 +2390,80 @@
     }
 
     function initAlchemyFurnace() {
-      // 使用普通对象来存储窗口映射
-      const windowRegistry = {};
+      // 当前打开的窗口
+      let currentFurnace = null;
+      let isProcessingClick = false;  // 添加点击处理状态标志
 
-      // 使用事件委托来处理图片点击
-      document.addEventListener('click', (e) => {
-        // 检查点击的是否是 Portal 中的图片
+      // 处理图片点击
+      document.addEventListener('click', async (e) => {
+        // 只处理 Portal 中的图片点击
         if (e.target.tagName.toLowerCase() === 'img' && 
             e.target.closest('.notepad-content')) {
           
-          const imgSrc = e.target.src;
-          console.log('Clicked image source:', imgSrc);
-          
-          // 检查是否已经存在该图片的窗口
-          if (windowRegistry[imgSrc]) {
-            const existingFurnace = windowRegistry[imgSrc];
-            
-            // 检查窗口是否仍然存在于文档中
-            if (document.body.contains(existingFurnace)) {
-              console.log('Found existing window, bringing to front');
-              bringToFront(existingFurnace);
-              
-              // 确保窗口可见
-              existingFurnace.style.display = 'flex';
-              
-              // 如果窗口位置不合适，重新调整到视图中心
-              const rect = existingFurnace.getBoundingClientRect();
-              if (rect.right > window.innerWidth || rect.bottom > window.innerHeight ||
-                  rect.left < 0 || rect.top < 0) {
-                centerWindow(existingFurnace);
-              }
-              return;
-            } else {
-              console.log('Window was closed, removing from registry');
-              delete windowRegistry[imgSrc];
+          e.preventDefault();
+          e.stopPropagation();
+
+          // 防止重复点击处理
+          if (isProcessingClick) return;
+          isProcessingClick = true;
+
+          try {
+            // 如果已经有窗口打开，先关闭它
+            if (currentFurnace && document.body.contains(currentFurnace)) {
+              currentFurnace.remove();
             }
+            
+            // 创建新窗口
+            currentFurnace = createAlchemyFurnace(e.target.src);
+            document.body.appendChild(currentFurnace);
+            
+            // 设置窗口位置（居中）
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const furnaceWidth = 400;
+            const furnaceHeight = 300;
+            
+            const left = (windowWidth - furnaceWidth) / 2;
+            const top = (windowHeight - furnaceHeight) / 2;
+            
+            currentFurnace.style.left = `${left}px`;
+            currentFurnace.style.top = `${top}px`;
+            currentFurnace.style.width = `${furnaceWidth}px`;
+            currentFurnace.style.height = `${furnaceHeight}px`;
+            currentFurnace.style.display = 'flex';
+            currentFurnace.style.zIndex = '9999';
+
+            // 关闭按钮功能
+            const closeButton = currentFurnace.querySelector('.title-button.close');
+            closeButton.addEventListener('click', () => {
+              currentFurnace.remove();
+              currentFurnace = null;
+            });
+          } finally {
+            isProcessingClick = false;
           }
-
-          console.log('Creating new window');
-          const furnace = createAlchemyFurnace(imgSrc);
-          
-          // 确保新窗口在视图中心
-          document.body.appendChild(furnace);
-          centerWindow(furnace);
-          
-          // 注册新窗口
-          windowRegistry[imgSrc] = furnace;
-          
-          // 显示窗口并确保在最上层
-          furnace.style.display = 'flex';
-          bringToFront(furnace);
-
-          // 当窗口关闭时从注册表中移除
-          const closeButton = furnace.querySelector('.title-button.close');
-          closeButton.addEventListener('click', () => {
-            console.log('Window closed, removing from registry');
-            delete windowRegistry[imgSrc];
-            furnace.remove();
-          });
         }
       });
 
       // 处理窗口大小改变
       window.addEventListener('resize', () => {
-        // 获取所有当前显示的窗口
-        const furnaces = document.querySelectorAll('.alchemy-furnace');
-        furnaces.forEach(furnace => {
-          const rect = furnace.getBoundingClientRect();
+        if (currentFurnace && document.body.contains(currentFurnace)) {
+          const windowWidth = window.innerWidth;
+          const windowHeight = window.innerHeight;
+          const furnaceWidth = parseInt(currentFurnace.style.width);
+          const furnaceHeight = parseInt(currentFurnace.style.height);
           
-          // 如果窗口超出视图范围，重新居中
-          if (rect.right > window.innerWidth || rect.bottom > window.innerHeight ||
-              rect.left < 0 || rect.top < 0) {
-            centerWindow(furnace);
-          }
-        });
+          // 确保窗口在视图范围内
+          let left = parseInt(currentFurnace.style.left);
+          let top = parseInt(currentFurnace.style.top);
+          
+          left = Math.max(0, Math.min(left, windowWidth - furnaceWidth));
+          top = Math.max(0, Math.min(top, windowHeight - furnaceHeight));
+          
+          currentFurnace.style.left = `${left}px`;
+          currentFurnace.style.top = `${top}px`;
+        }
       });
-    }
-
-    // 添加窗口居中函数
-    function centerWindow(furnace) {
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
-      const furnaceWidth = 400;  // 默认宽度
-      const furnaceHeight = 300; // 默认高度
-      
-      const left = Math.max(0, Math.min(windowWidth - furnaceWidth, (windowWidth - furnaceWidth) / 2));
-      const top = Math.max(0, Math.min(windowHeight - furnaceHeight, (windowHeight - furnaceHeight) / 2));
-      
-      furnace.style.left = `${left}px`;
-      furnace.style.top = `${top}px`;
-      furnace.style.width = `${furnaceWidth}px`;
-      furnace.style.height = `${furnaceHeight}px`;
     }
 
     // 确保只初始化一次
