@@ -99,6 +99,11 @@
       align-items: center;
       opacity: 0;
       transition: opacity 1s ease;
+      z-index: 1000;
+    }
+
+    .journey-stage-1 > * {
+      pointer-events: auto;
     }
 
     .text-fragment {
@@ -114,6 +119,8 @@
       opacity: 0;
       line-height: 1.6;
       user-select: none;
+      z-index: 1000;
+      pointer-events: auto !important;
     }
 
     .text-fragment.visible {
@@ -657,7 +664,7 @@
       object-fit: contain;
     }
 
-    /* 修改字符网格样式，确保不会干扰其他元素的点击 */
+    /* 修改字符网格样式 */
     .character-grid {
       position: fixed;
       top: 0;
@@ -672,7 +679,7 @@
       cursor: text;
       z-index: 0;
       background: #f5f5f5;
-      pointer-events: none;
+      pointer-events: auto;
     }
 
     .grid-cell {
@@ -688,13 +695,34 @@
       pointer-events: auto;
     }
 
-    /* 确保礼物图标和其他UI元素在网格之上 */
-    .unlock-emoji {
-      z-index: 1000;
+    .grid-cell.active {
+      background: rgba(0, 0, 255, 0.1);
+      border-color: rgba(0, 0, 255, 0.3);
     }
 
-    .unlock-text {
-      z-index: 1000;
+    /* 确保其他UI元素在网格之上但不阻挡点击 */
+    .initial-state {
+      pointer-events: none;
+    }
+
+    .initial-state > * {
+      pointer-events: auto;
+    }
+
+    .journey-stage-1 {
+      pointer-events: none;
+    }
+
+    .feather-outline,
+    .unlock-emoji,
+    .unlock-text,
+    .effects-menu,
+    .color-submenu,
+    .alchemy-submenu,
+    .start-button,
+    .skip-link,
+    .minimized-icon {
+      pointer-events: auto;
     }
   </style>
 </head>
@@ -854,6 +882,11 @@
       setTimeout(() => {
         const stage1 = document.querySelector('.journey-stage-1');
         stage1.style.opacity = '1';
+        
+        // 确保记事本和其他UI元素可以正常交互
+        const notepad = document.querySelector('.feather-outline');
+        notepad.style.pointerEvents = 'auto';
+        
         initDragAndDrop();
         initNotepad();
         showNextText();
@@ -905,56 +938,14 @@
       dropZone.addEventListener('drop', handleDrop);
     }
 
-    function showNextText() {
-      if (currentTextIndex >= textSequence.length) {
-        // 解锁菜单
-        const starButton = document.querySelector('.star-button');
-        starButton.classList.add('unlocked');
-        
-        // 解锁 COLOR 选项
-        isColorUnlocked = true;
-        const colorEffect = document.querySelector('.effect-item');
-        colorEffect.classList.add('unlocked');
-        const checkbox = colorEffect.querySelector('.checkbox');
-        checkbox.disabled = false;
-        
-        showUnlockEffects();
-        startStage2();
-        return;
-      }
-
-      const fragment = document.createElement('div');
-      fragment.className = 'text-fragment';
-      fragment.textContent = textSequence[currentTextIndex];
-      fragment.draggable = true;
-      
-      // 随机位置
-      const randomPosition = getRandomPosition();
-      fragment.style.left = randomPosition.x + 'px';
-      fragment.style.top = randomPosition.y + 'px';
-
-      document.querySelector('.journey-stage-1').appendChild(fragment);
-
-      // 添加拖拽事件
-      fragment.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', fragment.textContent);
-        e.target.style.opacity = '0.5';
-      });
-
-      fragment.addEventListener('dragend', (e) => {
-        e.target.style.opacity = '1';
-      });
-
-      setTimeout(() => fragment.classList.add('visible'), 100);
-    }
-
     function handleDrop(e) {
       e.preventDefault();
+      e.stopPropagation();
       
       // 确保只有内容区域可以接收拖放
       const dropZone = document.getElementById('dropZone');
       if (e.target !== dropZone && !dropZone.contains(e.target)) {
-        return; // 如果不是拖到内容区域，直接返回
+        return;
       }
 
       dropZone.style.backgroundColor = '#ffffff';
@@ -988,7 +979,9 @@
 
       // 移除原始拖动的文本
       const draggedText = document.querySelector('.text-fragment');
-      draggedText.remove();
+      if (draggedText && draggedText.textContent === text) {
+        draggedText.remove();
+      }
 
       // 显示下一段文本
       currentTextIndex++;
@@ -996,6 +989,55 @@
 
       // 保持焦点
       dropZone.focus();
+    }
+
+    function showNextText() {
+      if (currentTextIndex >= textSequence.length) {
+        // 解锁菜单
+        const starButton = document.querySelector('.star-button');
+        starButton.classList.add('unlocked');
+        
+        // 解锁 COLOR 选项
+        isColorUnlocked = true;
+        const colorEffect = document.querySelector('.effect-item');
+        colorEffect.classList.add('unlocked');
+        const checkbox = colorEffect.querySelector('.checkbox');
+        checkbox.disabled = false;
+        
+        showUnlockEffects();
+        startStage2();
+        return;
+      }
+
+      const fragment = document.createElement('div');
+      fragment.className = 'text-fragment';
+      fragment.textContent = textSequence[currentTextIndex];
+      fragment.draggable = true;
+      
+      // 随机位置
+      const randomPosition = getRandomPosition();
+      fragment.style.left = randomPosition.x + 'px';
+      fragment.style.top = randomPosition.y + 'px';
+
+      document.querySelector('.journey-stage-1').appendChild(fragment);
+
+      // 添加拖拽事件
+      fragment.addEventListener('dragstart', (e) => {
+        e.stopPropagation();
+        e.dataTransfer.setData('text/plain', fragment.textContent);
+        e.target.style.opacity = '0.5';
+      });
+
+      fragment.addEventListener('dragend', (e) => {
+        e.stopPropagation();
+        e.target.style.opacity = '1';
+      });
+
+      fragment.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+
+      setTimeout(() => fragment.classList.add('visible'), 100);
     }
 
     function getRandomPosition() {
@@ -1878,7 +1920,10 @@
           }
         }
         
-        console.log(`Initial grid created: ${viewportWidth}x${viewportHeight} cells`);
+        // 添加窗口大小改变时重新创建网格的处理
+        window.addEventListener('resize', () => {
+          this.createInitialGrid();
+        });
       }
 
       createCell(x, y) {
@@ -1886,8 +1931,6 @@
         cell.className = 'grid-cell';
         cell.style.left = `${x * this.cellSize}px`;
         cell.style.top = `${y * this.cellSize}px`;
-        // 添加边框以便于调试
-        cell.style.border = '1px solid rgba(0,0,0,0.1)';
         this.container.appendChild(cell);
         return cell;
       }
@@ -1904,45 +1947,60 @@
         const rect = this.container.getBoundingClientRect();
         const x = Math.floor((clientX - rect.left) / this.cellSize);
         const y = Math.floor((clientY - rect.top) / this.cellSize);
-        console.log(`Click position converted to grid: (${x}, ${y})`);
         return { x, y };
       }
 
       setCharacter(x, y, char) {
         const cell = this.getCell(x, y);
         cell.textContent = char;
-        console.log(`Character set at (${x}, ${y}): "${char}"`);
+      }
+
+      moveCursor(dx, dy) {
+        if (!this.activeCellPos) return;
+        
+        this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
+        this.activeCellPos.x += dx;
+        this.activeCellPos.y += dy;
+        
+        // 确保坐标不为负
+        this.activeCellPos.x = Math.max(0, this.activeCellPos.x);
+        this.activeCellPos.y = Math.max(0, this.activeCellPos.y);
+        
+        this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.add('active');
       }
 
       setupEventListeners() {
-        // 点击定位，但要避免干扰其他元素的点击
-        this.container.addEventListener('click', (e) => {
-          // 检查是否点击了其他重要元素
-          const clickedElement = e.target;
-          const isOtherElement = clickedElement.closest('.unlock-emoji') ||
-                                clickedElement.closest('.feather-outline') ||
-                                clickedElement.closest('.effects-menu') ||
-                                clickedElement.closest('.color-submenu') ||
-                                clickedElement.closest('.alchemy-submenu') ||
-                                clickedElement.closest('.initial-state');
-          
-          if (isOtherElement) {
-            return;
+        // 点击网格
+        document.addEventListener('click', (e) => {
+          // 检查是否点击了需要特殊处理的元素
+          const skipElements = [
+            '.feather-outline',
+            '.effects-menu',
+            '.color-submenu',
+            '.alchemy-submenu',
+            '.start-button',
+            '.skip-link',
+            '.unlock-emoji',
+            '.minimized-icon'
+          ];
+
+          for (const selector of skipElements) {
+            if (e.target.closest(selector)) {
+              return;
+            }
           }
 
-          if (e.target.classList.contains('grid-cell')) {
-            console.log('Grid cell clicked');
-            const { x, y } = this.positionToGrid(e.clientX, e.clientY);
-            
-            if (this.activeCellPos) {
-              this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
-            }
-            this.activeCellPos = { x, y };
-            this.getCell(x, y).classList.add('active');
+          // 获取点击位置相对于网格的坐标
+          const { x, y } = this.positionToGrid(e.clientX, e.clientY);
+          
+          if (this.activeCellPos) {
+            this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
           }
+          this.activeCellPos = { x, y };
+          this.getCell(x, y).classList.add('active');
         });
 
-        // 键盘输入，只在网格激活且不在其他输入区域时响应
+        // 键盘输入
         document.addEventListener('keypress', (e) => {
           if (!this.activeCellPos || 
               document.activeElement.tagName === 'INPUT' || 
@@ -1953,13 +2011,10 @@
           
           const char = String.fromCharCode(e.keyCode);
           this.setCharacter(this.activeCellPos.x, this.activeCellPos.y, char);
-          
-          this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
-          this.activeCellPos.x += 1;
-          this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.add('active');
+          this.moveCursor(1, 0); // 向右移动一格
         });
 
-        // 处理退格键
+        // 方向键和退格键
         document.addEventListener('keydown', (e) => {
           if (!this.activeCellPos || 
               document.activeElement.tagName === 'INPUT' || 
@@ -1968,65 +2023,42 @@
             return;
           }
           
-          if (e.key === 'Backspace') {
-            e.preventDefault();
-            this.setCharacter(this.activeCellPos.x, this.activeCellPos.y, '');
-            
-            this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.remove('active');
-            this.activeCellPos.x = Math.max(0, this.activeCellPos.x - 1);
-            this.getCell(this.activeCellPos.x, this.activeCellPos.y).classList.add('active');
+          switch(e.key) {
+            case 'ArrowLeft':
+              e.preventDefault();
+              this.moveCursor(-1, 0);
+              break;
+            case 'ArrowRight':
+              e.preventDefault();
+              this.moveCursor(1, 0);
+              break;
+            case 'ArrowUp':
+              e.preventDefault();
+              this.moveCursor(0, -1);
+              break;
+            case 'ArrowDown':
+              e.preventDefault();
+              this.moveCursor(0, 1);
+              break;
+            case 'Backspace':
+              e.preventDefault();
+              this.setCharacter(this.activeCellPos.x, this.activeCellPos.y, '');
+              this.moveCursor(-1, 0);
+              break;
           }
         });
       }
     }
 
-    // 确保在页面加载完成后初始化字符网格
+    // 确保在页面加载时初始化网格系统
     let grid;
-    window.addEventListener('load', () => {
-      console.log('Window loaded, initializing CharacterGrid');
-      grid = new CharacterGrid();
-    });
-
-    // 在页面加载时初始化
     document.addEventListener('DOMContentLoaded', () => {
       console.log('DOM loaded, initializing systems');
-      
-      // 初始化字符网格
       grid = new CharacterGrid();
-      
-      // 初始化其他功能
       initializeMenu();
       initializeColorControl();
       initializeMinimize();
       initNotepadDrag();
-    });
-
-    // 添加字符网格的键盘事件处理
-    document.addEventListener('keydown', (e) => {
-      // 如果焦点在记事本内，不处理网格输入
-      if (e.target.closest('.feather-outline')) return;
-      
-      // 处理方向键
-      if (grid && grid.activeCellPos) {
-        switch(e.key) {
-          case 'ArrowLeft':
-            e.preventDefault();
-            grid.moveCursor(-1, 0);
-            break;
-          case 'ArrowRight':
-            e.preventDefault();
-            grid.moveCursor(1, 0);
-            break;
-          case 'ArrowUp':
-            e.preventDefault();
-            grid.moveCursor(0, -1);
-            break;
-          case 'ArrowDown':
-            e.preventDefault();
-            grid.moveCursor(0, 1);
-            break;
-        }
-      }
     });
   </script>
 </body>
