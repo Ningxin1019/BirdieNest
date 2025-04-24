@@ -678,7 +678,7 @@
       white-space: pre;
       cursor: text;
       z-index: 0;
-      background: #f5f5f5;
+      background: transparent;
       pointer-events: auto;
     }
 
@@ -690,14 +690,15 @@
       align-items: center;
       justify-content: center;
       user-select: none;
-      border: 1px solid rgba(0,0,0,0.1);
       box-sizing: border-box;
       pointer-events: auto;
+      border: none;
+      background: transparent;
     }
 
     .grid-cell.active {
       background: rgba(0, 0, 255, 0.1);
-      border-color: rgba(0, 0, 255, 0.3);
+      border: 1px solid rgba(0, 0, 255, 0.3);
     }
 
     /* 确保其他UI元素在网格之上但不阻挡点击 */
