@@ -1,0 +1,28 @@
+<input type="text" id="keywordInput" placeholder="Enter a word...">
+<button onclick="getWikiSummary()">Get Info</button>
+
+<div id="wikiResult" style="margin-top: 20px;"></div>
+
+<script>
+  async function getWikiSummary() {
+    const keyword = document.getElementById("keywordInput").value.trim();
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keyword)}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      document.getElementById("wikiResult").innerHTML = "No entry found.";
+      return;
+    }
+
+    const data = await response.json();
+
+    const html = `
+      <h3>${data.title}</h3>
+      ${data.thumbnail ? `<img src="${data.thumbnail.source}" style="max-width:200px;" />` : ""}
+      <p>${data.extract}</p>
+      <a href="${data.content_urls.desktop.page}" target="_blank">Read more on Wikipedia</a>
+    `;
+
+    document.getElementById("wikiResult").innerHTML = html;
+  }
+</script>
