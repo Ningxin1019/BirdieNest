@@ -1,0 +1,29 @@
+<canvas id="carveCanvas"></canvas>
+<script type="module">
+import seamCarving from 'seam-carving-js'; // 假设库已包装好
+
+const img = new Image();
+img.src = 'your-image.jpg';
+img.onload = () => {
+  const canvas = document.getElementById('carveCanvas');
+  const ctx = canvas.getContext('2d');
+  function resizeHandler() {
+    const targetW = canvas.parentElement.clientWidth;
+    const targetH = canvas.parentElement.clientHeight;
+    ctx.drawImage(img, 0, 0);
+    const imgData = ctx.getImageData(0, 0, img.width, img.height);
+    // 调用库函数，输出新的 ImageData
+    const carved = seamCarving(imgData, { width: targetW, height: targetH });
+    canvas.width = targetW; canvas.height = targetH;
+    ctx.putImageData(carved, 0, 0);
+  }
+  window.addEventListener('resize', debounce(resizeHandler, 200));
+  resizeHandler();
+};
+
+// 简单防抖实现
+function debounce(fn, ms) {
+  let t;
+  return () => { clearTimeout(t); t = setTimeout(fn, ms); }
+}
+</script>
