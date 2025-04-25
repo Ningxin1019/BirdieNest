@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Beads</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: #f0f0f0;
+            position: relative;
+        }
+        #uploadButton {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 100;
+        }
+        #uploadButton:hover {
+            background: #444;
+        }
+        #fileInput {
+            display: none;
+        }
+        #p5Canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="fileInput" accept="image/*">
+    <button id="uploadButton">上传图片</button>
+    <div id="p5Canvas"></div>
+    <script>
+        let strings = [];
+        const BEAD_WIDTH = 4;       // 保持珠子宽度
+        const BEAD_HEIGHT = 24;     // 将珠子高度增加一倍
+        let beadGap = 1;           // 保持垂直间隔
+        let stringGap = 6;         // 保持水平间隔
+        const CONNECTOR_WIDTH = 1;   // 保持连接线细度
+        const GRAVITY = 0.15;
+        const DAMPING = 0.95;
+        const TENSION = 0.2;
+        const SPRING_STIFFNESS = 0.08;
+        const NEIGHBOR_INFLUENCE = 0.3;
+        let sourceImage = null;
+        let imageCanvas = null;
+        let canvasHeight = window.innerHeight;
+
+        // 添加文件上传处理
+        document.getElementById('uploadButton').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    loadImage(event.target.result, img => {
+                        // 计算适当的缩放比例
+                        const maxWidth = windowWidth * 0.9;
+                        const scale = maxWidth / img.width;
+                        
+                        const scaledWidth = Math.floor(img.width * scale);
+                        const scaledHeight = Math.floor(img.height * scale);
+                        
+                        sourceImage = img;
+                        imageCanvas = createGraphics(scaledWidth, scaledHeight);
+                        imageCanvas.image(img, 0, 0, scaledWidth, scaledHeight);
+                        
+                        // 确保画布高度足够显示完整图片
+                        const requiredHeight = scaledHeight * (BEAD_HEIGHT + beadGap) / BEAD_HEIGHT;
+                        canvasHeight = Math.max(windowHeight, requiredHeight + 100);
+                        resizeCanvas(windowWidth, canvasHeight);
+                        
+                        // 调整间距
+                        const aspectRatio = scaledWidth / scaledHeight;
+                        if (aspectRatio > 1) {
+                            stringGap = Math.max(5, Math.floor(6 / aspectRatio));
+                        } else {
+                            beadGap = Math.max(1, Math.floor(1 / aspectRatio));
+                        }
+                        
+                        createStrings();
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        class Bead {
+            constructor(x, y, color) {
+                this.x = x;
+                this.oldX = x;
+                this.y = y;
+                this.initX = x;
+                this.color = color;
+                this.pinned = false;
+            }
+
+            update() {
+                if (this.pinned) return;
+
+                // 只处理水平方向的运动
+                const tempX = this.x;
+                const velocityX = (this.x - this.oldX) * DAMPING;
+                
+                // 更新水平位置
+                this.x += velocityX;
+                
+                // 水平回归力
+                const dx = this.x - this.initX;
+                this.x -= dx * 0.1;  // 增加回归力，使珠子更快回到原位
+                
+                // 更新旧位置
+                this.oldX = tempX;
+            }
+
+            constrain(prevBead) {
+                if (this.pinned) return;
+                
+                if (prevBead) {
+                    // 只保持垂直距离固定
+                    this.y = prevBead.y + BEAD_HEIGHT + beadGap;
+                    
+                    // 限制水平移动范围
+                    const dx = this.x - prevBead.x;
+                    const maxOffset = BEAD_WIDTH * 3;  // 最大水平偏移量
+                    
+                    if (Math.abs(dx) > maxOffset) {
+                        if (dx > 0) {
+                            this.x = prevBead.x + maxOffset;
+                        } else {
+                            this.x = prevBead.x - maxOffset;
+                        }
+                    }
+                }
+            }
+
+            draw() {
+                fill(this.color);
+                noStroke();
+                rect(this.x, this.y, BEAD_WIDTH, BEAD_HEIGHT, 0);
+            }
+        }
+
+        class BeadString {
+            constructor(x, numBeads, startY, stringIndex) {
+                this.x = x;
+                this.beads = [];
+                this.stringIndex = stringIndex;
+                
+                // 计算这一列的总高度
+                const totalHeight = numBeads * (BEAD_HEIGHT + beadGap);
+                
+                for (let i = 0; i < numBeads; i++) {
+                    let y = startY + i * (BEAD_HEIGHT + beadGap);
+                    let beadColor = this.getColorFromImage(stringIndex, i, numBeads);
+                    let bead = new Bead(x, y, beadColor);
+                    if (i === 0) bead.pinned = true;
+                    this.beads.push(bead);
+                }
+            }
+
+            getColorFromImage(stringIndex, beadIndex, totalBeads) {
+                if (!sourceImage || !imageCanvas) return color(0);
+
+                // 计算在图片中的相对位置（0-1之间）
+                const relativeX = stringIndex * stringGap / windowWidth;
+                const relativeY = beadIndex / totalBeads;
+                
+                // 将相对位置映射到图片尺寸
+                const imgX = floor(relativeX * imageCanvas.width);
+                const imgY = floor(relativeY * imageCanvas.height);
+                
+                // 确保采样点在图片范围内
+                const x = constrain(imgX, 0, imageCanvas.width - 1);
+                const y = constrain(imgY, 0, imageCanvas.height - 1);
+                
+                return imageCanvas.get(x, y);
+            }
+
+            draw(scrollY) {
+                // 先绘制连接线
+                for (let i = 1; i < this.beads.length; i++) {
+                    const bead = this.beads[i];
+                    const prevBead = this.beads[i - 1];
+                    stroke(bead.color);
+                    strokeWeight(CONNECTOR_WIDTH);
+                    line(
+                        prevBead.x + BEAD_WIDTH/2,
+                        prevBead.y - scrollY + BEAD_HEIGHT,
+                        bead.x + BEAD_WIDTH/2,
+                        bead.y - scrollY
+                    );
+                }
+                
+                // 绘制珠子
+                for (let bead of this.beads) {
+                    // 主体
+                    fill(bead.color);
+                    noStroke();
+                    rect(bead.x, bead.y - scrollY, BEAD_WIDTH, BEAD_HEIGHT, 0);
+                    
+                    // 边框
+                    stroke(0, 20);
+                    strokeWeight(0.5);
+                    noFill();
+                    rect(bead.x, bead.y - scrollY, BEAD_WIDTH, BEAD_HEIGHT, 0);
+                }
+            }
+
+            update(mouseX, mouseY) {
+                // 更新所有珠子
+                for (let bead of this.beads) {
+                    bead.update();
+                }
+
+                // 应用约束
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 1; j < this.beads.length; j++) {
+                        this.beads[j].constrain(this.beads[j - 1]);
+                    }
+                }
+
+                // 鼠标交互
+                if (abs(mouseX - this.x) < BEAD_WIDTH * 4) {
+                    for (let bead of this.beads) {
+                        if (bead.pinned) continue;
+                        
+                        const dx = mouseX - bead.x;
+                        const dy = mouseY - bead.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < 100) {
+                            const influence = map(distance, 0, 100, 0.8, 0, true);
+                            
+                            const mouseSpeedX = (mouseX - pmouseX);
+                            bead.x += mouseSpeedX * influence * 0.8;
+                            bead.oldX = bead.x - mouseSpeedX * influence * 0.5;
+                            
+                            const liftDirection = dy > 0 ? 1 : -1;
+                            const liftForce = map(abs(dy), 0, 100, 0.2, 0, true);
+                            bead.x += liftDirection * liftForce * BEAD_WIDTH;
+                        }
+                    }
+                }
+            }
+        }
+
+        function calculateBeadCount() {
+            if (imageCanvas) {
+                // 根据图片比例和画布大小计算所需的珠子数量
+                const imgAspectRatio = imageCanvas.height / imageCanvas.width;
+                const targetHeight = windowWidth * imgAspectRatio;
+                // 确保有足够的珠子来显示完整图片
+                return ceil(targetHeight / (BEAD_HEIGHT + beadGap)) + 5;
+            }
+            return ceil(canvasHeight / (BEAD_HEIGHT + beadGap)) + 5;
+        }
+
+        function createStrings() {
+            strings = [];
+            let numStrings = floor(windowWidth / stringGap);
+            let startX = (windowWidth - (numStrings - 1) * stringGap) / 2;
+            
+            for (let i = 0; i < numStrings; i++) {
+                let startY = -BEAD_HEIGHT * 2;
+                strings.push(new BeadString(startX + i * stringGap, calculateBeadCount(), startY, i));
+            }
+        }
+
+        function setup() {
+            const canvas = createCanvas(windowWidth, canvasHeight);
+            canvas.parent('p5Canvas');
+            createStrings();
+        }
+
+        function draw() {
+            background(245);
+            
+            // 获取滚动位置
+            const scrollY = window.scrollY || window.pageYOffset;
+            
+            // 更新和绘制所有珠串，考虑滚动位置
+            for (let string of strings) {
+                string.update(mouseX, mouseY + scrollY);
+                string.draw(scrollY);
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, canvasHeight);
+            createStrings();
+        }
+    </script>
+</body>
+</html> 
